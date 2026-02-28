@@ -31,6 +31,8 @@ router.post(
         time,
         distance,
         title,
+        purse,
+        pursecurrency,
         participants,
       } = data as {
         date?: string;
@@ -39,6 +41,8 @@ router.post(
         time?: string;
         distance?: number;
         title?: string;
+        purse?: number;
+        pursecurrency?: string;
         participants?: Array<{ number: number; horse: string; jockey: string; weight: number }>;
       };
 
@@ -75,6 +79,8 @@ router.post(
         time,
         distance,
         title,
+        purse: purse != null ? Number(purse) : 0,
+        pursecurrency: pursecurrency && String(pursecurrency).trim() ? String(pursecurrency).trim() : 'Dh',
         participants: Array.isArray(participants) ? participants : [],
       });
       apiResponse(res, true, race, 'Race imported from JSON', 201);

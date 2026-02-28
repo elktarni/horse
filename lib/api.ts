@@ -65,6 +65,8 @@ export interface Race {
   time: string;
   distance: number;
   title: string;
+  purse?: number;
+  pursecurrency?: string;
   participants: { number: number; horse: string; jockey: string; weight: number }[];
 }
 

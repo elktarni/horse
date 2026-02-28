@@ -23,6 +23,8 @@ export default function NewRacePage() {
     time: '',
     distance: 1600,
     title: '',
+    purse: 0,
+    pursecurrency: 'Dh',
   });
   const [participants, setParticipants] = useState<Participant[]>([
     { number: 1, horse: '', jockey: '', weight: 58 },
@@ -145,9 +147,36 @@ export default function NewRacePage() {
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Purse (amount)</label>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.purse}
+              onChange={(e) => setForm((f) => ({ ...f, purse: +e.target.value || 0 }))}
+              className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Purse currency</label>
+            <input
+              value={form.pursecurrency}
+              onChange={(e) => setForm((f) => ({ ...f, pursecurrency: e.target.value || 'Dh' }))}
+              className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
+              placeholder="Dh"
+            />
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm text-gray-400">Participants</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-400">Participants</label>
+              <span className="text-sm text-white font-medium">({participants.length})</span>
+            </div>
             <button
               type="button"
               onClick={addParticipant}
