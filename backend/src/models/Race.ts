@@ -17,6 +17,7 @@ export interface IRace extends Omit<Document, '_id'> {
   title: string;
   purse?: number;
   pursecurrency?: string;
+  weather_temp?: number;
   participants: IParticipant[];
 }
 
@@ -41,6 +42,7 @@ const RaceSchema = new Schema<IRace>(
     title: { type: String, required: true },
     purse: { type: Number, default: 0 },
     pursecurrency: { type: String, default: 'Dh' },
+    weather_temp: { type: Number },
     participants: [ParticipantSchema],
   },
   { timestamps: true }

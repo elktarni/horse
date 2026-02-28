@@ -70,6 +70,7 @@ router.post(
     body('title').notEmpty().trim().withMessage('title required'),
     body('purse').optional().isFloat({ min: 0 }),
     body('pursecurrency').optional().isString().trim(),
+    body('weather_temp').optional().isFloat(),
     ...participantValidator,
   ],
   async (req: Request, res: Response): Promise<void> => {
@@ -79,7 +80,7 @@ router.post(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, participants } = req.body;
+      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, weather_temp, participants } = req.body;
       const d = new Date(date);
       const dateStr = d.toISOString().slice(0, 10);
       const _id = `${dateStr}-${race_number}`;
@@ -100,6 +101,7 @@ router.post(
         title,
         purse: purse != null ? Number(purse) : 0,
         pursecurrency: pursecurrency && String(pursecurrency).trim() ? String(pursecurrency).trim() : 'Dh',
+        weather_temp: weather_temp != null ? Number(weather_temp) : undefined,
         participants: participants || [],
       });
       apiResponse(res, true, race, 'Race created', 201);
@@ -122,6 +124,7 @@ router.put(
     body('title').optional().notEmpty().trim(),
     body('purse').optional().isFloat({ min: 0 }),
     body('pursecurrency').optional().isString().trim(),
+    body('weather_temp').optional().isFloat(),
     body('participants').optional().isArray(),
   ],
   async (req: Request, res: Response): Promise<void> => {

@@ -67,6 +67,7 @@ export interface Race {
   title: string;
   purse?: number;
   pursecurrency?: string;
+  weather_temp?: number;
   participants: { number: number; horse: string; jockey: string; weight: number }[];
 }
 

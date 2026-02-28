@@ -11,6 +11,7 @@ export async function GET() {
         auth: '/api/v1/auth/login (POST)',
         races: '/api/v1/races',
         results: '/api/v1/results',
+        weather: '/api/v1/weather?location=... (GET)',
         upload: '/api/v1/upload/race-json, /api/v1/upload/event-json (POST)',
       },
     },

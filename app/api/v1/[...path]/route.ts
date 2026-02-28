@@ -4,7 +4,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http:
 
 async function proxy(request: NextRequest, path: string[]) {
   const pathStr = path.join('/');
-  const url = `${API_URL}/api/v1/${pathStr}`;
+  const search = request.nextUrl.searchParams.toString();
+  const url = `${API_URL}/api/v1/${pathStr}${search ? `?${search}` : ''}`;
   const headers: HeadersInit = {};
   request.headers.forEach((value, key) => {
     if (
