@@ -29,7 +29,7 @@ export default function RacesPage() {
   }, [dateFilter]);
 
   useEffect(() => {
-    const hippodromes = [...new Set(races.map((r) => r.hippodrome).filter(Boolean))];
+    const hippodromes = Array.from(new Set(races.map((r) => r.hippodrome).filter(Boolean)));
     if (hippodromes.length === 0) return;
     api
       .post<WeatherMap>('/api/v1/weather/batch', { locations: hippodromes })
