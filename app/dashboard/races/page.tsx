@@ -6,8 +6,11 @@ import { useSearchParams } from 'next/navigation';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+type WeatherMap = Record<string, { temp: number; unit: string } | null>;
+
 export default function RacesPage() {
   const [races, setRaces] = useState<Race[]>([]);
+  const [weather, setWeather] = useState<WeatherMap>({});
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const dateFilter = searchParams.get('date');
@@ -24,6 +27,17 @@ export default function RacesPage() {
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
   }, [dateFilter]);
+
+  useEffect(() => {
+    const hippodromes = [...new Set(races.map((r) => r.hippodrome).filter(Boolean))];
+    if (hippodromes.length === 0) return;
+    api
+      .post<WeatherMap>('/api/v1/weather/batch', { locations: hippodromes })
+      .then((r) => {
+        if (r.success && r.data) setWeather(r.data);
+      })
+      .catch(() => {});
+  }, [races]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this race?')) return;
@@ -72,6 +86,7 @@ export default function RacesPage() {
                   <th className="p-4">Time</th>
                   <th className="p-4">Distance</th>
                   <th className="p-4">Title</th>
+                  <th className="p-4">Weather</th>
                   <th className="p-4">Actions</th>
                 </tr>
               </thead>
@@ -85,6 +100,13 @@ export default function RacesPage() {
                     <td className="p-4">{race.time}</td>
                     <td className="p-4">{race.distance}m</td>
                     <td className="p-4 max-w-[200px] truncate">{race.title}</td>
+                    <td className="p-4 text-sm">
+                      {weather[race.hippodrome] === undefined
+                        ? '…'
+                        : weather[race.hippodrome]
+                          ? `${weather[race.hippodrome]!.temp} °C`
+                          : '—'}
+                    </td>
                     <td className="p-4 flex gap-2">
                       <Link
                         href={`/dashboard/races/${race._id}/edit`}

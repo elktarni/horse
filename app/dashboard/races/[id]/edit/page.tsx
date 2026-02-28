@@ -30,7 +30,6 @@ export default function EditRacePage() {
     pursecurrency: 'Dh',
     weather_temp: undefined as number | undefined,
   });
-  const [weatherLoading, setWeatherLoading] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
 
   useEffect(() => {
@@ -75,25 +74,19 @@ export default function EditRacePage() {
     );
   };
 
-  const fetchWeather = async () => {
+  // Auto-fetch live weather when race is loaded (real-time at hippodrome)
+  useEffect(() => {
     const loc = form.hippodrome.trim();
-    if (!loc) {
-      toast.error('Enter hippodrome first');
-      return;
-    }
-    setWeatherLoading(true);
-    try {
-      const res = await api.get<{ temp: number; unit: string }>(`/api/v1/weather?location=${encodeURIComponent(loc)}`);
-      if (res.success && res.data && typeof res.data.temp === 'number') {
-        setForm((f) => ({ ...f, weather_temp: Math.round(res.data!.temp * 10) / 10 }));
-        toast.success(`Weather: ${res.data.temp} ${res.data.unit || '°C'}`);
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not fetch weather');
-    } finally {
-      setWeatherLoading(false);
-    }
-  };
+    if (!loc) return;
+    api
+      .get<{ temp: number; unit: string }>(`/api/v1/weather?location=${encodeURIComponent(loc)}`)
+      .then((res) => {
+        if (res.success && res.data && typeof res.data.temp === 'number') {
+          setForm((f) => ({ ...f, weather_temp: Math.round(res.data!.temp * 10) / 10 }));
+        }
+      })
+      .catch(() => {});
+  }, [form.hippodrome]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,26 +205,16 @@ export default function EditRacePage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[120px]">
-            <label className="block text-sm text-gray-400 mb-1">Weather temp (°C)</label>
-            <input
-              type="number"
-              step={0.1}
-              value={form.weather_temp ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, weather_temp: e.target.value === '' ? undefined : +e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
-              placeholder="Auto from hippodrome"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={fetchWeather}
-            disabled={weatherLoading || !form.hippodrome.trim()}
-            className="px-4 py-2 rounded-lg border border-dark-500 text-gray-300 hover:bg-dark-600 disabled:opacity-50 text-sm"
-          >
-            {weatherLoading ? 'Fetching…' : 'Get weather from hippodrome'}
-          </button>
+        <div className="min-w-[120px]">
+          <label className="block text-sm text-gray-400 mb-1">Weather temp (°C) — live at hippodrome</label>
+          <input
+            type="number"
+            step={0.1}
+            value={form.weather_temp ?? ''}
+            onChange={(e) => setForm((f) => ({ ...f, weather_temp: e.target.value === '' ? undefined : +e.target.value }))}
+            className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
+            placeholder="Updates automatically when you open this page"
+          />
         </div>
 
         <div>
