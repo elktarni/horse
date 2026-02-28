@@ -9,7 +9,12 @@ router.use(authMiddleware);
 
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const results = await Result.find({}, { race_id: 1 }).lean();
+    const results = await Result.aggregate([
+      { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
+      { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
+      { $addFields: { title: '$race.title' } },
+      { $project: { race: 0 } },
+    ]);
     apiResponse(res, true, results, 'Results list retrieved');
   } catch (err) {
     console.error('GET results error:', err);
@@ -87,9 +92,16 @@ router.put(
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
+      const update: Record<string, unknown> = {};
+      if (Array.isArray(req.body.arrival)) update.arrival = req.body.arrival.map(Number);
+      if (req.body.rapports != null && typeof req.body.rapports === 'object') update.rapports = req.body.rapports;
+      if (req.body.simple != null && typeof req.body.simple === 'object') update.simple = req.body.simple;
+      if (req.body.couple != null && typeof req.body.couple === 'object') update.couple = req.body.couple;
+      if (req.body.trio != null && typeof req.body.trio === 'object') update.trio = req.body.trio;
+
       const result = await Result.findOneAndUpdate(
         { race_id: req.params.race_id },
-        { $set: req.body },
+        { $set: update },
         { new: true }
       );
       if (!result) {

@@ -92,7 +92,7 @@ export default function NewResultPage() {
             <option value="">Select race</option>
             {races.map((r) => (
               <option key={r._id} value={r._id}>
-                {r._id} — {r.hippodrome} {new Date(r.date).toLocaleDateString()}
+                {r._id} — {r.hippodrome} - {r.title}
               </option>
             ))}
           </select>
