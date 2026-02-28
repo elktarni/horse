@@ -30,6 +30,11 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Public: no auth required (so you can check the API is reachable)
+app.get('/api/v1/health', (_req, res) => {
+  res.json({ success: true, data: { status: 'ok' }, message: 'API healthy' });
+});
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/races', racesRoutes);
 app.use('/api/v1/results', resultsRoutes);
