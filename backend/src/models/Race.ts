@@ -7,7 +7,7 @@ export interface IParticipant {
   weight: number;
 }
 
-export interface IRace extends Document {
+export interface IRace extends Omit<Document, '_id'> {
   _id: string;
   date: Date;
   hippodrome: string;

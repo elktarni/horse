@@ -1,0 +1,25 @@
+# Render Blueprint: deploy only the backend API
+# Frontend is on Vercel (this repo root). Backend runs from /backend.
+services:
+  - type: web
+    name: horse-racing-api
+    runtime: node
+    rootDir: backend
+    # Install devDependencies so TypeScript and @types/* are available for tsc
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://horse-opal.vercel.app
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

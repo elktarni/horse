@@ -44,7 +44,7 @@ router.post(
       }
 
       const payload: AuthPayload = { adminId: admin._id.toString(), email: admin.email };
-      const token = jwt.sign(payload, secret, { expiresIn: JWT_EXPIRES });
+      const token = jwt.sign(payload, secret, { expiresIn: JWT_EXPIRES } as jwt.SignOptions);
 
       apiResponse(res, true, { token, email: admin.email }, 'Login successful');
     } catch (err) {

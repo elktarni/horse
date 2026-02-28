@@ -102,16 +102,26 @@ Responses: `{ success: boolean, data: any, message: string }`
 
 ### Backend (Render)
 
-1. Create a Web Service, connect repo.
-2. Build: `npm install && npm run build`
-3. Start: `npm start`
-4. Set env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (Vercel URL), `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PORT` (optional).
+**Important:** The backend lives in the `backend/` folder. Render must use that as the root, not the repo root.
+
+1. In [Render](https://render.com): **New → Web Service**, connect your GitHub repo.
+2. Set **Root Directory** to `backend` (required — otherwise Render builds the Next.js app and fails with "next: not found").
+3. **Build Command:** `npm install --include=dev && npm run build` (dev deps needed for TypeScript compile)
+4. **Start Command:** `npm start`
+5. **Environment variables** (Dashboard → Environment):
+   - `MONGODB_URI` — MongoDB Atlas connection string
+   - `JWT_SECRET` — secret for JWT signing
+   - `FRONTEND_URL` — your Vercel app URL (e.g. `https://horse-opal.vercel.app`)
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — admin login
+   - `JWT_EXPIRES_IN` — optional, default `7d`
+
+Optional: use the repo’s `render.yaml` (Blueprint) to create the service with `rootDir: backend` and env vars.
 
 ### Frontend (Vercel)
 
-1. Import project, root directory = repo root.
-2. Build: `npm run build`, output = Next.js.
-3. Set `NEXT_PUBLIC_API_URL` to the Render backend URL (e.g. `https://your-api.onrender.com`).
+1. Import project; root = repo root. Build: `npm run build`.
+2. Set **Environment Variable:** `NEXT_PUBLIC_API_URL` = your Render backend URL (e.g. `https://horse-racing-api-xxxx.onrender.com`).
+3. Redeploy so the frontend calls the live API.
 
 ## JSON Upload (Bonus)
 
