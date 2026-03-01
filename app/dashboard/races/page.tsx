@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -24,14 +23,16 @@ export default function RacesPage() {
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const searchParams = useSearchParams();
-  const dateFilter = searchParams.get('date');
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayStr = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const [viewDate, setViewDate] = useState<string | null>(null);
+  const [customDate, setCustomDate] = useState(todayStr);
+
+  const apiDate = viewDate === 'today' ? todayStr : viewDate === 'yesterday' ? yesterdayStr : viewDate === 'custom' ? customDate : null;
 
   const fetchRaces = useCallback(() => {
     setLoading(true);
-    const url = dateFilter === 'today'
-      ? `/api/v1/races?date=${new Date().toISOString().slice(0, 10)}`
-      : '/api/v1/races';
+    const url = apiDate ? `/api/v1/races?date=${apiDate}` : '/api/v1/races';
     api
       .get<Race[]>(url)
       .then((r) => {
@@ -39,7 +40,7 @@ export default function RacesPage() {
       })
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
-  }, [dateFilter]);
+  }, [apiDate]);
 
   useEffect(() => {
     fetchRaces();
@@ -160,6 +161,43 @@ export default function RacesPage() {
             Add Race
           </Link>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-sm text-gray-500">View:</span>
+        <button
+          type="button"
+          onClick={() => setViewDate('today')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'today' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewDate('yesterday')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'yesterday' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewDate(null)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === null ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          All
+        </button>
+        <label className={`flex items-center gap-2 text-sm ${viewDate === 'custom' ? 'text-accent' : 'text-gray-400'}`}>
+          <span>Date</span>
+          <input
+            type="date"
+            value={customDate}
+            onChange={(e) => {
+              setCustomDate(e.target.value);
+              setViewDate('custom');
+            }}
+            className={`rounded-lg border px-2 py-1.5 text-white text-sm ${viewDate === 'custom' ? 'bg-accent/20 border-accent' : 'bg-dark-700 border-dark-600'}`}
+          />
+        </label>
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">

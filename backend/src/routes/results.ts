@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import Result from '../models/Result';
 import { apiResponse } from '../middleware/response';
 import { authMiddleware } from '../middleware/auth';
@@ -7,20 +7,36 @@ import { authMiddleware } from '../middleware/auth';
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const results = await Result.aggregate([
-      { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
-      { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-      { $addFields: { title: '$race.title' } },
-      { $project: { race: 0 } },
-    ]);
-    apiResponse(res, true, results, 'Results list retrieved');
-  } catch (err) {
-    console.error('GET results error:', err);
-    apiResponse(res, false, null, 'Server error', 500);
+router.get(
+  '/',
+  [query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD')],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
+        return;
+      }
+      const date = req.query.date as string | undefined;
+      const pipeline: Record<string, unknown>[] = [
+        { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
+        { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
+        { $addFields: { title: '$race.title' } },
+      ];
+      if (date) {
+        const dateStart = new Date(date + 'T00:00:00.000Z');
+        const dateEnd = new Date(date + 'T23:59:59.999Z');
+        pipeline.push({ $match: { 'race.date': { $gte: dateStart, $lte: dateEnd } } });
+      }
+      pipeline.push({ $project: { race: 0 } });
+      const results = await Result.aggregate(pipeline as never[]);
+      apiResponse(res, true, results, 'Results list retrieved');
+    } catch (err) {
+      console.error('GET results error:', err);
+      apiResponse(res, false, null, 'Server error', 500);
+    }
   }
-});
+);
 
 router.get(
   '/:race_id',
