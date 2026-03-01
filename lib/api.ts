@@ -1,8 +1,10 @@
-// Use NEXT_PUBLIC_API_URL when set (e.g. https://horse-opal.vercel.app for online API).
-// Otherwise: in browser use same origin (Next.js proxy); on server use API_URL or localhost.
+// In browser: always use same origin so Next.js rewrites proxy to the API (avoids CORS).
+// Rewrites in next.config.js send /api/v1/* to NEXT_PUBLIC_API_URL (e.g. https://horse-opal.vercel.app).
+// On server: use NEXT_PUBLIC_API_URL or API_URL or localhost.
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' ? '' : (process.env.API_URL || 'http://localhost:4000'));
+  typeof window !== 'undefined'
+    ? ''
+    : (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:4000');
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
