@@ -256,7 +256,7 @@ export async function runCasaProgrammeSync(options: {
     }
   }
 
-  // Enrich ALL Morocco races with purse/participants/weather (not only finished ones)
+  // Enrich ALL Morocco races with purse/participants only (no weather — weather is from Open-Meteo)
   for (const meeting of meetings) {
     const apiTrack = meeting.track?.trim() || '';
     if (!apiTrack) continue;
@@ -308,7 +308,7 @@ export async function runCasaProgrammeSync(options: {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich race with purse, participants from Casa (weather comes from Open-Meteo via our weather API)
+      // Enrich race with purse, participants from Casa only; do not sync weather (use Open-Meteo elsewhere)
       const details = await fetchCasaRaceDetails(race.id, date);
       if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
