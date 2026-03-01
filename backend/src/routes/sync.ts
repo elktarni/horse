@@ -9,6 +9,70 @@ const router = Router();
 router.use(authMiddleware);
 
 const CASA_PROGRAMME_URL = 'https://pro.casacourses.com/api/programme';
+const CASA_RACE_URL = 'https://pro.casacourses.com/api/race';
+
+/** Runner from Casa race detail API */
+interface CasaRunner {
+  number?: string | number;
+  horse_name?: string;
+  jockey_name?: string;
+  weight?: number;
+}
+
+/** Response from GET /api/race/{id} */
+interface CasaRaceDetailResponse {
+  id?: number;
+  prize?: string;
+  runners?: CasaRunner[];
+}
+
+/** Parse prize string e.g. "1500000 DH" or "15000 EUR" into amount and currency */
+function parsePrize(prize: string | undefined): { purse: number; pursecurrency: string } | null {
+  if (!prize || typeof prize !== 'string') return null;
+  const trimmed = prize.trim();
+  const match = trimmed.match(/^([\d\s.,]+)\s*(\S*)$/);
+  if (!match) return null;
+  const amountStr = match[1].replace(/\s/g, '').replace(',', '.');
+  const amount = parseFloat(amountStr);
+  if (isNaN(amount) || amount < 0) return null;
+  const currency = (match[2] || 'Dh').trim() || 'Dh';
+  return { purse: Math.round(amount), pursecurrency: currency };
+}
+
+/** Map Casa runners to our participants format */
+function mapRunnersToParticipants(runners: CasaRunner[] | undefined): { number: number; horse: string; jockey: string; weight: number }[] {
+  if (!Array.isArray(runners) || runners.length === 0) return [];
+  return runners
+    .filter((r) => r != null)
+    .map((r) => {
+      const number = typeof r.number === 'number' ? r.number : parseInt(String(r.number ?? 0), 10);
+      const weight = typeof r.weight === 'number' ? r.weight : parseFloat(String(r.weight ?? 58)) || 58;
+      return {
+        number: isNaN(number) || number < 1 ? 0 : number,
+        horse: String(r.horse_name ?? '').trim() || '—',
+        jockey: String(r.jockey_name ?? '').trim() || '—',
+        weight: Number.isFinite(weight) ? weight : 58,
+      };
+    })
+    .filter((p) => p.number >= 1);
+}
+
+/** Fetch race detail from Casa (purse + participants) for a given Casa race id */
+async function fetchCasaRaceDetails(casaRaceId: number): Promise<{ purse?: number; pursecurrency?: string; participants: { number: number; horse: string; jockey: string; weight: number }[] } | null> {
+  try {
+    const res = await fetch(`${CASA_RACE_URL}/${casaRaceId}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as CasaRaceDetailResponse;
+    const prize = parsePrize(data.prize);
+    const participants = mapRunnersToParticipants(data.runners);
+    return {
+      ...(prize ?? {}),
+      participants: participants.length ? participants : [],
+    };
+  } catch {
+    return null;
+  }
+}
 
 /** Official Morocco hippodromes only (country code can be missing/wrong in API). */
 const MOROCCO_TRACKS = new Set([
@@ -173,6 +237,14 @@ export async function runCasaProgrammeSync(options: {
           participants: [],
         });
         racesAdded.push(_id);
+        const details = await fetchCasaRaceDetails(race.id);
+        if (details && (details.purse != null || details.participants?.length)) {
+          const update: Record<string, unknown> = {};
+          if (details.purse != null) update.purse = details.purse;
+          if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+          if (details.participants?.length) update.participants = details.participants;
+          if (Object.keys(update).length) await Race.findByIdAndUpdate(_id, { $set: update });
+        }
       }
     }
   }
