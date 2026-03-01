@@ -1,6 +1,6 @@
 /**
  * Dynamic race status (not stored in DB).
- * duration_seconds = (distance / 16.5) + PREPARATION_SECONDS (1 min fixed).
+ * duration_seconds = (distance / 16.5) + PREPARATION_SECONDS (90 s fixed).
  */
 
 export type RaceStatus = 'Non commencée' | 'En cours' | 'Terminée';
@@ -12,8 +12,8 @@ export interface RaceForStatus {
 }
 
 const SECONDS_PER_METER = 1 / 16.5;
-/** Fixed 1 minute preparation time added to race duration */
-const PREPARATION_SECONDS = 60;
+/** Fixed 1.5 minutes preparation time added to race duration */
+const PREPARATION_SECONDS = 90;
 
 /**
  * Builds race start as ISO datetime (UTC) from date + time.
@@ -33,7 +33,7 @@ function getRaceStart(race: RaceForStatus): Date {
 
 /**
  * Returns dynamic race status based on current time vs race start + calculated end.
- * duration_seconds = (distance / 16.5) + 1 minute preparation
+ * duration_seconds = (distance / 16.5) + 90 s preparation
  */
 export function getRaceStatus(race: RaceForStatus): RaceStatus {
   const start = getRaceStart(race);
