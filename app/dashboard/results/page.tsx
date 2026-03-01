@@ -119,6 +119,10 @@ export default function ResultsPage() {
         toast.success(d.message ?? 'Sync done.');
         setViewDate('custom');
         setCustomDate(syncDate);
+        setLoading(true);
+        api.get<ResultRow[]>(`/api/v1/results?date=${syncDate}`).then((r) => {
+          if (r.success && Array.isArray(r.data)) setResults(r.data);
+        }).catch(() => toast.error('Failed to refresh list')).finally(() => setLoading(false));
       } else if (d.notFound?.length) {
         toast(`${d.notFound.length} race(s) not in DB. Add races from the Races tab first (use Sync there with same date).`, { icon: 'ℹ️', duration: 5000 });
       } else {
@@ -208,10 +212,9 @@ export default function ResultsPage() {
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses</h2>
+        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (Morocco: Marrakech, etc.)</h2>
         <p className="text-sm text-gray-500 mb-3">
-          Fetch programme and create/update results for finished races that match your existing races (SOREC Maroc only).
-          If nothing is added, try a date with Morocco meetings (e.g. 2026-03-01) and ensure races exist (add them from the Races tab first).
+          Fetch programme and create/update results for finished races that match your existing races. Only Morocco meetings (e.g. Marrakech) are synced. The list will refresh for the synced date.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-400">

@@ -122,7 +122,10 @@ export default function RacesPage() {
         toast.success(d.message ?? 'Sync done.');
         setViewDate('custom');
         setCustomDate(syncDate);
-        // List will refetch with synced date when apiDate updates
+        setLoading(true);
+        api.get<Race[]>(`/api/v1/races?date=${syncDate}`).then((r) => {
+          if (r.success && Array.isArray(r.data)) setRaces(r.data);
+        }).catch(() => toast.error('Failed to refresh list')).finally(() => setLoading(false));
       } else {
         const fromApi = d.meetingsFromApi ?? 0;
         const morocco = d.meetingsMorocco ?? 0;
@@ -211,8 +214,7 @@ export default function RacesPage() {
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
         <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (SOREC Maroc)</h2>
         <p className="text-sm text-gray-500 mb-3">
-          Import races and results for <strong>Morocco only</strong> from the Casa API. Adds missing races and fills results for finished races.
-          If nothing is added, try a date when Morocco has meetings (e.g. 2026-03-01).
+          Import races and results for <strong>Morocco only</strong> (e.g. Marrakech, Casablanca) from the Casa Courses API. Adds missing races and fills results for finished races. The list will refresh for the synced date.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-400">
