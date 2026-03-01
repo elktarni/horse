@@ -126,13 +126,8 @@ router.get(
         }
       }
 
-      apiResponse(res, true, {
-        created,
-        updated,
-        skipped,
-        notFound,
-        message: `Synced: ${created.length} created, ${updated.length} updated; ${notFound.length} races not found in DB.`,
-      });
+      const message = `Synced: ${created.length} created, ${updated.length} updated; ${notFound.length} races not found in DB.`;
+      apiResponse(res, true, { created, updated, skipped, notFound, message }, message);
     } catch (err) {
       console.error('Sync casa-programme error:', err);
       apiResponse(res, false, null, err instanceof Error ? err.message : 'Sync failed', 500);
