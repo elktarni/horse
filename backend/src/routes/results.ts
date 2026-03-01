@@ -22,7 +22,7 @@ router.get(
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title', weather: '$race.weather_temp' } },
+        { $addFields: { title: '$race.title', weather: '$race.weather_temp', hippodrome: '$race.hippodrome' } },
       ];
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');

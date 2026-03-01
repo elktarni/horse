@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+type WeatherMap = Record<string, { temp: number; unit: string } | null>;
+
 interface ResultRow {
   race_id: string;
   title?: string;
   arrival?: number[];
-  weather?: number | null;
+  hippodrome?: string;
   _id?: string;
 }
 
@@ -24,6 +26,7 @@ interface CasaSyncResponse {
 
 export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
+  const [weather, setWeather] = useState<WeatherMap>({});
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -53,6 +56,18 @@ export default function ResultsPage() {
   useEffect(() => {
     fetchResults();
   }, [fetchResults]);
+
+  // Weather from Open-Meteo (same as Edit race): batch by hippodrome
+  useEffect(() => {
+    const hippodromes = Array.from(new Set(results.map((r) => r.hippodrome).filter(Boolean) as string[]));
+    if (hippodromes.length === 0) return;
+    api
+      .post<WeatherMap>('/api/v1/weather/batch', { locations: hippodromes })
+      .then((r) => {
+        if (r.success && r.data) setWeather(r.data);
+      })
+      .catch(() => {});
+  }, [results]);
 
   // Refetch when user returns to this tab (e.g. after editing a result)
   useEffect(() => {
@@ -303,9 +318,13 @@ export default function ResultsPage() {
                         : '—'}
                     </td>
                     <td className="p-4 text-sm">
-                      {r.weather != null && Number.isFinite(r.weather)
-                        ? `${Number(r.weather)} °C`
-                        : '—'}
+                      {r.hippodrome == null
+                        ? '—'
+                        : weather[r.hippodrome] === undefined
+                          ? '…'
+                          : weather[r.hippodrome]
+                            ? `${weather[r.hippodrome]!.temp} °C`
+                            : '—'}
                     </td>
                     <td className="p-4 flex gap-2">
                       <Link

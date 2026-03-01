@@ -58,8 +58,8 @@ function mapRunnersToParticipants(runners: CasaRunner[] | undefined): { number: 
     .filter((p) => p.number >= 1);
 }
 
-/** Fetch race detail from Casa (purse + participants + weather) for a given Casa race id. Optionally pass date for URL: /api/race/{id}?date=YYYY-MM-DD */
-async function fetchCasaRaceDetails(casaRaceId: number, date?: string): Promise<{ purse?: number; pursecurrency?: string; weather_temp?: number; participants: { number: number; horse: string; jockey: string; weight: number }[] } | null> {
+/** Fetch race detail from Casa (purse + participants only). Weather is from Open-Meteo via our /api/v1/weather, not Casa. */
+async function fetchCasaRaceDetails(casaRaceId: number, date?: string): Promise<{ purse?: number; pursecurrency?: string; participants: { number: number; horse: string; jockey: string; weight: number }[] } | null> {
   try {
     const url = date ? `${CASA_RACE_URL}/${casaRaceId}?date=${encodeURIComponent(date)}` : `${CASA_RACE_URL}/${casaRaceId}`;
     const res = await fetch(url);
@@ -67,10 +67,8 @@ async function fetchCasaRaceDetails(casaRaceId: number, date?: string): Promise<
     const data = (await res.json()) as CasaRaceDetailResponse;
     const prize = parsePrize(data.prize);
     const participants = mapRunnersToParticipants(data.runners);
-    const weather_temp = typeof data.weather_temp === 'number' && Number.isFinite(data.weather_temp) ? data.weather_temp : undefined;
     return {
       ...(prize ?? {}),
-      ...(weather_temp != null ? { weather_temp } : {}),
       participants: participants.length ? participants : [],
     };
   } catch {
@@ -247,11 +245,10 @@ export async function runCasaProgrammeSync(options: {
         });
         racesAdded.push(_id);
         const details = await fetchCasaRaceDetails(race.id, date);
-        if (details && (details.purse != null || details.weather_temp != null || details.participants?.length)) {
+        if (details && (details.purse != null || details.participants?.length)) {
           const update: Record<string, unknown> = {};
           if (details.purse != null) update.purse = Math.round(details.purse / 100);
           if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
-          if (details.weather_temp != null) update.weather_temp = details.weather_temp;
           if (details.participants?.length) update.participants = details.participants;
           if (Object.keys(update).length) await Race.findByIdAndUpdate(_id, { $set: update });
         }
@@ -274,11 +271,10 @@ export async function runCasaProgrammeSync(options: {
       });
       if (!ourRace) continue;
       const details = await fetchCasaRaceDetails(race.id, date);
-      if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
+      if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
         if (details.purse != null) update.purse = Math.round(details.purse / 100);
         if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
-        if (details.weather_temp != null) update.weather_temp = details.weather_temp;
         if (details.participants && details.participants.length) update.participants = details.participants;
         if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
@@ -312,13 +308,12 @@ export async function runCasaProgrammeSync(options: {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich race with purse, participants, weather from Casa race detail API (for both new and existing races)
+      // Enrich race with purse, participants from Casa (weather comes from Open-Meteo via our weather API)
       const details = await fetchCasaRaceDetails(race.id, date);
-      if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
+      if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
         if (details.purse != null) update.purse = Math.round(details.purse / 100);
         if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
-        if (details.weather_temp != null) update.weather_temp = details.weather_temp;
         if (details.participants && details.participants.length) update.participants = details.participants;
         if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
