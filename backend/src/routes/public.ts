@@ -5,6 +5,7 @@ import Result from '../models/Result';
 import { apiResponse } from '../middleware/response';
 import { publicApiKeyMiddleware } from '../middleware/apiKey';
 import { getRaceStatus } from '../utils/raceStatus';
+import { getWeatherForLocations } from '../utils/weather';
 
 const router = Router();
 router.use(publicApiKeyMiddleware);
@@ -34,7 +35,13 @@ router.get(
         filter.date = { $gte: dateStart, $lte: dateEnd };
       }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
-      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r), weather: r.weather_temp ?? null }));
+      const hippodromes = [...new Set(races.map((r) => r.hippodrome).filter(Boolean))] as string[];
+      const weatherMap = hippodromes.length ? await getWeatherForLocations(hippodromes) : {};
+      const withStatus = races.map((r) => ({
+        ...r,
+        status: getRaceStatus(r),
+        weather: r.hippodrome && weatherMap[r.hippodrome] ? weatherMap[r.hippodrome]!.temp : null,
+      }));
       apiResponse(res, true, withStatus, 'Races retrieved');
     } catch (err) {
       console.error('GET public races error:', err);
@@ -59,7 +66,9 @@ router.get(
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, { ...race, status: getRaceStatus(race), weather: race.weather_temp ?? null }, 'Race retrieved');
+      const weatherMap = race.hippodrome ? await getWeatherForLocations([race.hippodrome]) : {};
+      const liveWeather = race.hippodrome && weatherMap[race.hippodrome] ? weatherMap[race.hippodrome]!.temp : null;
+      apiResponse(res, true, { ...race, status: getRaceStatus(race), weather: liveWeather }, 'Race retrieved');
     } catch (err) {
       console.error('GET public race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -82,7 +91,7 @@ router.get(
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title', weather: '$race.weather_temp', hippodrome: '$race.hippodrome' } },
+        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome' } },
       ];
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');
@@ -91,7 +100,13 @@ router.get(
       }
       pipeline.push({ $project: { race: 0 } });
       const results = await Result.aggregate(pipeline as never[]);
-      apiResponse(res, true, results, 'Results retrieved');
+      const hippodromes = [...new Set((results as { hippodrome?: string }[]).map((r) => r.hippodrome).filter(Boolean))] as string[];
+      const weatherMap = hippodromes.length ? await getWeatherForLocations(hippodromes) : {};
+      const withWeather = (results as { hippodrome?: string }[]).map((r) => ({
+        ...r,
+        weather: r.hippodrome && weatherMap[r.hippodrome] ? weatherMap[r.hippodrome]!.temp : null,
+      }));
+      apiResponse(res, true, withWeather, 'Results retrieved');
     } catch (err) {
       console.error('GET public results error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -110,8 +125,10 @@ router.get(
         apiResponse(res, false, null, 'Result not found', 404);
         return;
       }
-      const race = await Race.findById(result.race_id).select('weather_temp').lean();
-      const payload = { ...result, weather: race?.weather_temp ?? null };
+      const race = await Race.findById(result.race_id).select('hippodrome').lean();
+      const weatherMap = race?.hippodrome ? await getWeatherForLocations([race.hippodrome]) : {};
+      const liveWeather = race?.hippodrome && weatherMap[race.hippodrome] ? weatherMap[race.hippodrome]!.temp : null;
+      const payload = { ...result, weather: liveWeather };
       apiResponse(res, true, payload, 'Result retrieved');
     } catch (err) {
       console.error('GET public result error:', err);

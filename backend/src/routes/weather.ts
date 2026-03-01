@@ -2,40 +2,10 @@ import { Router, Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { apiResponse } from '../middleware/response';
 import { authMiddleware } from '../middleware/auth';
+import { fetchWeatherForLocation, getWeatherForLocations } from '../utils/weather';
 
 const router = Router();
 router.use(authMiddleware);
-
-const CACHE_MS = 10 * 60 * 1000; // 10 min
-const weatherCache = new Map<string, { temp: number; unit: string; ts: number }>();
-
-async function fetchWeatherForLocation(location: string): Promise<{ temp: number; unit: string } | null> {
-  const cached = weatherCache.get(location);
-  if (cached && Date.now() - cached.ts < CACHE_MS) return { temp: cached.temp, unit: cached.unit };
-
-  try {
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`
-    );
-    const geoData = await geoRes.json().catch(() => ({}));
-    const results = (geoData as { results?: Array<{ latitude: number; longitude: number }> }).results;
-    if (!results || results.length === 0) return null;
-    const { latitude, longitude } = results[0];
-
-    const weatherRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`
-    );
-    const weatherData = await weatherRes.json().catch(() => ({}));
-    const current = (weatherData as { current?: { temperature_2m: number } }).current;
-    if (!current || typeof current.temperature_2m !== 'number') return null;
-
-    const result = { temp: current.temperature_2m, unit: '°C' as const };
-    weatherCache.set(location, { ...result, ts: Date.now() });
-    return result;
-  } catch {
-    return null;
-  }
-}
 
 // Single location: GET /api/v1/weather?location=Settat
 router.get(
@@ -74,12 +44,7 @@ router.post(
         return;
       }
       const locations = [...new Set((req.body.locations as string[]).map((l: string) => String(l).trim()).filter(Boolean))];
-      const data: Record<string, { temp: number; unit: string } | null> = {};
-      await Promise.all(
-        locations.map(async (loc) => {
-          data[loc] = await fetchWeatherForLocation(loc);
-        })
-      );
+      const data = await getWeatherForLocations(locations);
       apiResponse(res, true, data, 'OK');
     } catch (err) {
       console.error('Weather batch error:', err);
