@@ -12,6 +12,8 @@ interface CasaSyncResponse {
   created: string[];
   updated: string[];
   notFound: string[];
+  meetingsFromApi?: number;
+  meetingsMorocco?: number;
   message: string;
 }
 
@@ -118,11 +120,17 @@ export default function RacesPage() {
       const total = (d.racesAdded?.length ?? 0) + d.created.length + d.updated.length;
       if (total > 0) {
         toast.success(d.message ?? 'Sync done.');
-        fetchRaces();
-      } else if (d.notFound?.length) {
-        toast(`No new data. ${d.notFound.length} race(s) had no results in Casa.`, { icon: 'ℹ️' });
+        setViewDate('custom');
+        setCustomDate(syncDate);
+        // List will refetch with synced date when apiDate updates
       } else {
-        toast('No SOREC Maroc races for this date.', { icon: 'ℹ️' });
+        const fromApi = d.meetingsFromApi ?? 0;
+        const morocco = d.meetingsMorocco ?? 0;
+        let hint = '';
+        if (fromApi === 0) hint = 'Casa API returned no meetings for this date. Try 2026-03-01 or a date when Marrakech/Settat run.';
+        else if (morocco === 0) hint = `${fromApi} meeting(s) from Casa but none are Morocco (we only sync Marrakech, Settat, etc.).`;
+        else hint = 'No new races or results. Races for this date may already exist in your list.';
+        toast(`${d.message || 'Nothing added.'} ${hint}`, { icon: 'ℹ️', duration: 6000 });
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sync failed');
@@ -204,6 +212,7 @@ export default function RacesPage() {
         <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (SOREC Maroc)</h2>
         <p className="text-sm text-gray-500 mb-3">
           Import races and results for <strong>Morocco only</strong> from the Casa API. Adds missing races and fills results for finished races.
+          If nothing is added, try a date when Morocco has meetings (e.g. 2026-03-01).
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-400">

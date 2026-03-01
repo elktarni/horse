@@ -16,6 +16,8 @@ interface CasaSyncResponse {
   created: string[];
   updated: string[];
   notFound: string[];
+  meetingsFromApi?: number;
+  meetingsMorocco?: number;
   message: string;
 }
 
@@ -115,11 +117,19 @@ export default function ResultsPage() {
       const total = d.created.length + d.updated.length;
       if (total > 0) {
         toast.success(d.message ?? 'Sync done.');
-        fetchResults();
+        setViewDate('custom');
+        setCustomDate(syncDate);
       } else if (d.notFound?.length) {
-        toast(`${d.notFound.length} race(s) not in DB. Add races from the Races tab first.`, { icon: 'ℹ️' });
+        toast(`${d.notFound.length} race(s) not in DB. Add races from the Races tab first (use Sync there with same date).`, { icon: 'ℹ️', duration: 5000 });
       } else {
-        toast('No finished races for this date/venue in Casa programme.', { icon: 'ℹ️' });
+        const fromApi = d.meetingsFromApi ?? 0;
+        const morocco = d.meetingsMorocco ?? 0;
+        let hint = fromApi === 0
+          ? 'Casa returned no meetings for this date. Try 2026-03-01 or a race day.'
+          : morocco === 0
+            ? 'No Morocco meetings for this date (we only sync Maroc).'
+            : 'No finished races with results in Casa for this date.';
+        toast(`${d.message || 'Nothing added.'} ${hint}`, { icon: 'ℹ️', duration: 6000 });
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sync failed');
@@ -201,6 +211,7 @@ export default function ResultsPage() {
         <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses</h2>
         <p className="text-sm text-gray-500 mb-3">
           Fetch programme and create/update results for finished races that match your existing races (SOREC Maroc only).
+          If nothing is added, try a date with Morocco meetings (e.g. 2026-03-01) and ensure races exist (add them from the Races tab first).
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-400">

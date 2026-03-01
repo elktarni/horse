@@ -26,7 +26,13 @@ router.get(
         return;
       }
       const { date } = req.query;
-      const filter = date ? { date: new Date(date as string) } : {};
+      const filter: Record<string, unknown> = {};
+      if (date && typeof date === 'string') {
+        const dateStr = String(date).trim();
+        const dateStart = new Date(dateStr + 'T00:00:00.000Z');
+        const dateEnd = new Date(dateStr + 'T23:59:59.999Z');
+        filter.date = { $gte: dateStart, $lte: dateEnd };
+      }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 });
       apiResponse(res, true, races, 'Races retrieved');
     } catch (err) {

@@ -182,6 +182,8 @@ export interface CasaSyncResult {
   updated: string[];
   skipped: string[];
   notFound: string[];
+  meetingsFromApi?: number;
+  meetingsMorocco?: number;
   message: string;
 }
 
@@ -196,7 +198,10 @@ export async function runCasaProgrammeSync(options: {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Casa API error: ${response.status}`);
   const data = (await response.json()) as CasaProgrammeResponse;
-  const meetings = (data.meetings || []).filter((m) => isMoroccoMeeting(m));
+  const allMeetings = data.meetings || [];
+  const meetingsFromApi = allMeetings.length;
+  const meetings = allMeetings.filter((m) => isMoroccoMeeting(m));
+  const meetingsMorocco = meetings.length;
   const dateStart = new Date(date + 'T00:00:00.000Z');
   const dateEnd = new Date(date + 'T23:59:59.999Z');
 
@@ -299,7 +304,9 @@ export async function runCasaProgrammeSync(options: {
   parts.push(`${created.length} result(s) created`);
   parts.push(`${updated.length} result(s) updated`);
   if (notFound.length) parts.push(`${notFound.length} not found in DB`);
-  return { racesAdded, created, updated, skipped, notFound, message: parts.join('; ') + '.' };
+  if (meetingsFromApi !== undefined) parts.push(`Casa: ${meetingsFromApi} meeting(s), ${meetingsMorocco} Morocco`);
+  const message = parts.join('; ') + '.';
+  return { racesAdded, created, updated, skipped, notFound, meetingsFromApi, meetingsMorocco, message };
 }
 
 /**
