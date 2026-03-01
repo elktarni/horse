@@ -20,11 +20,11 @@ const MOROCCO_TRACKS = new Set([
   'khemisset',                    // Hippodrome de Khemisset
   'marrakech',                    // Hippodrome de Marrakech
 ]);
+/** Only allow meetings whose track is in the official Morocco list (ignore API country – it can be wrong e.g. Fontainebleau). */
 function isMoroccoMeeting(meeting: CasaMeeting): boolean {
-  const country = String(meeting.country ?? '').trim().toUpperCase();
-  if (country === 'MA') return true;
-  const track = (meeting.track ?? '').trim().toLowerCase();
-  return track.length > 0 && MOROCCO_TRACKS.has(track);
+  const track = (meeting.track ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!track) return false;
+  return MOROCCO_TRACKS.has(track) || MOROCCO_TRACKS.has(track.replace(/\s/g, ''));
 }
 
 /** Casa API finish_order item: object with position + runner number (string or number) */
