@@ -12,7 +12,7 @@ const CASA_PROGRAMME_URL = 'https://pro.casacourses.com/api/programme';
 
 /** Official Morocco hippodromes only (country code can be missing/wrong in API). */
 const MOROCCO_TRACKS = new Set([
-  'casablanca', 'anfa',           // Hippodrome de Casablanca – Anfa
+  'casablanca', 'anfa', 'casablanca anfa', 'anfa casablanca',  // Hippodrome de Casablanca – Anfa
   'rabat',                        // Hippodrome de Rabat
   'el jadida', 'eljadida',        // Hippodrome d'El Jadida
   'settat',                       // Hippodrome de Settat
