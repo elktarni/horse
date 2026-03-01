@@ -25,6 +25,8 @@ export default function ResultsPage() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [syncVenue, setSyncVenue] = useState('SOREC');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchResults = useCallback(() => {
     setLoading(true);
@@ -53,10 +55,46 @@ export default function ResultsPage() {
     try {
       await api.delete(`/api/v1/results/${raceId}`);
       setResults((prev) => prev.filter((r) => r.race_id !== raceId));
+      setSelectedIds((prev) => { const s = new Set(prev); s.delete(raceId); return s; });
       toast.success('Result deleted');
     } catch {
       toast.error('Failed to delete');
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === results.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(results.map((r) => r.race_id)));
+  };
+  const toggleSelect = (raceId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(raceId)) next.delete(raceId);
+      else next.add(raceId);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected result(s)?`)) return;
+    setBulkDeleting(true);
+    let ok = 0;
+    let fail = 0;
+    for (const raceId of ids) {
+      try {
+        await api.delete(`/api/v1/results/${raceId}`);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+    fetchResults();
+    if (fail) toast.error(`Deleted ${ok}, failed ${fail}`);
+    else toast.success(`Deleted ${ok} result(s)`);
   };
 
   const handleSyncFromCasa = async () => {
@@ -95,12 +133,24 @@ export default function ResultsPage() {
     <div className="animate-in">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-white">Results</h1>
-        <Link
-          href="/dashboard/results/new"
-          className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-dark-900 font-medium transition"
-        >
-          Add Result
-        </Link>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium text-sm transition"
+            >
+              {bulkDeleting ? 'Deleting…' : `Delete ${selectedIds.size} selected`}
+            </button>
+          )}
+          <Link
+            href="/dashboard/results/new"
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-dark-900 font-medium transition"
+          >
+            Add Result
+          </Link>
+        </div>
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
@@ -149,6 +199,14 @@ export default function ResultsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-dark-600 text-left text-sm text-gray-400">
+                  <th className="p-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={results.length > 0 && selectedIds.size === results.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-dark-500 bg-dark-700 text-accent focus:ring-accent"
+                    />
+                  </th>
                   <th className="p-4">Race ID</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Arrival</th>
@@ -158,6 +216,14 @@ export default function ResultsPage() {
               <tbody>
                 {results.map((r) => (
                   <tr key={r.race_id} className="border-b border-dark-600/50 hover:bg-dark-700/50">
+                    <td className="p-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.race_id)}
+                        onChange={() => toggleSelect(r.race_id)}
+                        className="rounded border-dark-500 bg-dark-700 text-accent focus:ring-accent"
+                      />
+                    </td>
                     <td className="p-4 font-mono text-sm">{r.race_id}</td>
                     <td className="p-4 max-w-[200px] truncate" title={r.title}>{r.title || '—'}</td>
                     <td className="p-4">

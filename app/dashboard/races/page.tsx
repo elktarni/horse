@@ -22,6 +22,8 @@ export default function RacesPage() {
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchParams = useSearchParams();
   const dateFilter = searchParams.get('date');
 
@@ -59,10 +61,46 @@ export default function RacesPage() {
     try {
       await api.delete(`/api/v1/races/${id}`);
       setRaces((prev) => prev.filter((r) => r._id !== id));
+      setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       toast.success('Race deleted');
     } catch {
       toast.error('Failed to delete');
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === races.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(races.map((r) => r._id)));
+  };
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected race(s)?`)) return;
+    setBulkDeleting(true);
+    let ok = 0;
+    let fail = 0;
+    for (const id of ids) {
+      try {
+        await api.delete(`/api/v1/races/${id}`);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+    fetchRaces();
+    if (fail) toast.error(`Deleted ${ok}, failed ${fail}`);
+    else toast.success(`Deleted ${ok} race(s)`);
   };
 
   const handleSyncFromCasa = async () => {
@@ -104,12 +142,24 @@ export default function RacesPage() {
     <div className="animate-in">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-white">Races</h1>
-        <Link
-          href="/dashboard/races/new"
-          className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-dark-900 font-medium transition"
-        >
-          Add Race
-        </Link>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-medium text-sm transition"
+            >
+              {bulkDeleting ? 'Deleting…' : `Delete ${selectedIds.size} selected`}
+            </button>
+          )}
+          <Link
+            href="/dashboard/races/new"
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-dark-900 font-medium transition"
+          >
+            Add Race
+          </Link>
+        </div>
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
@@ -148,6 +198,14 @@ export default function RacesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-dark-600 text-left text-sm text-gray-400">
+                  <th className="p-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={races.length > 0 && selectedIds.size === races.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-dark-500 bg-dark-700 text-accent focus:ring-accent"
+                    />
+                  </th>
                   <th className="p-4">ID</th>
                   <th className="p-4">Date</th>
                   <th className="p-4">Hippodrome</th>
@@ -164,6 +222,14 @@ export default function RacesPage() {
               <tbody>
                 {races.map((race) => (
                   <tr key={race._id} className="border-b border-dark-600/50 hover:bg-dark-700/50">
+                    <td className="p-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(race._id)}
+                        onChange={() => toggleSelect(race._id)}
+                        className="rounded border-dark-500 bg-dark-700 text-accent focus:ring-accent"
+                      />
+                    </td>
                     <td className="p-4 font-mono text-sm">{race._id}</td>
                     <td className="p-4">{new Date(race.date).toLocaleDateString()}</td>
                     <td className="p-4">{race.hippodrome}</td>
