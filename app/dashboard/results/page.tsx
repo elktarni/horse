@@ -12,31 +12,9 @@ interface ResultRow {
   _id?: string;
 }
 
-interface CasaSyncResponse {
-  racesAdded?: string[];
-  created: string[];
-  updated: string[];
-  skipped: string[];
-  notFound: string[];
-  message: string;
-}
-
 export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [syncVenue, setSyncVenue] = useState('SOREC');
-  const [syncAddRaces, setSyncAddRaces] = useState(false);
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const yesterdayStr = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  })();
-  const setSyncDateToday = () => setSyncDate(todayStr);
-  const setSyncDateYesterday = () => setSyncDate(yesterdayStr);
 
   const fetchResults = useCallback(() => {
     setLoading(true);
@@ -71,31 +49,6 @@ export default function ResultsPage() {
     }
   };
 
-  const handleSyncFromCasa = async () => {
-    setSyncLoading(true);
-    try {
-      const params = new URLSearchParams({ date: syncDate });
-      if (syncVenue.trim()) params.set('venue', syncVenue.trim());
-      if (syncAddRaces) params.set('add_races', '1');
-      const r = await api.get<CasaSyncResponse>(`/api/v1/sync/casa-programme?${params}`);
-      if (!r.success || !r.data) throw new Error(r.message);
-      const d = r.data;
-      const total = (d.racesAdded?.length ?? 0) + d.created.length + d.updated.length;
-      if (total > 0) {
-        toast.success(d.message ?? 'Sync done.');
-        fetchResults();
-      } else if (d.notFound && d.notFound.length > 0) {
-        toast(`No results synced. ${d.notFound.length} race(s) not in DB. Enable “Also add races” to import them.`, { icon: 'ℹ️' });
-      } else {
-        toast('No finished races for this date/venue in Casa programme.', { icon: 'ℹ️' });
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sync failed');
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -114,63 +67,6 @@ export default function ResultsPage() {
         >
           Add Result
         </Link>
-      </div>
-
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Import from{' '}
-          <a href="https://pro.casacourses.com/api/programme" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Casa API</a>
-          : add missing races and/or results for finished races.
-        </p>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <span className="text-sm text-gray-500 mr-1">Date:</span>
-          <button
-            type="button"
-            onClick={setSyncDateToday}
-            className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition ${syncDate === todayStr ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
-          >
-            Today
-          </button>
-          <button
-            type="button"
-            onClick={setSyncDateYesterday}
-            className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition ${syncDate === yesterdayStr ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
-          >
-            Yesterday
-          </button>
-          <input
-            type="date"
-            value={syncDate}
-            onChange={(e) => setSyncDate(e.target.value)}
-            className="rounded-lg bg-dark-700 border border-dark-600 px-2.5 py-1.5 text-white text-sm w-[140px]"
-          />
-          <span className="text-sm text-gray-500 mx-1 sm:ml-2">Venue:</span>
-          <input
-            type="text"
-            value={syncVenue}
-            onChange={(e) => setSyncVenue(e.target.value)}
-            placeholder="SOREC"
-            className="rounded-lg bg-dark-700 border border-dark-600 px-2.5 py-1.5 text-white text-sm w-24"
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer ml-2 sm:ml-4">
-            <input
-              type="checkbox"
-              checked={syncAddRaces}
-              onChange={(e) => setSyncAddRaces(e.target.checked)}
-              className="rounded border-dark-500 bg-dark-700 text-accent focus:ring-accent"
-            />
-            Also add races
-          </label>
-          <button
-            type="button"
-            onClick={handleSyncFromCasa}
-            disabled={syncLoading}
-            className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition ml-auto"
-          >
-            {syncLoading ? 'Syncing…' : 'Sync'}
-          </button>
-        </div>
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden">

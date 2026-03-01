@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { api, type Race } from '@/lib/api';
@@ -8,14 +8,25 @@ import toast from 'react-hot-toast';
 
 type WeatherMap = Record<string, { temp: number; unit: string } | null>;
 
+interface CasaSyncResponse {
+  racesAdded?: string[];
+  created: string[];
+  updated: string[];
+  notFound: string[];
+  message: string;
+}
+
 export default function RacesPage() {
   const [races, setRaces] = useState<Race[]>([]);
   const [weather, setWeather] = useState<WeatherMap>({});
   const [loading, setLoading] = useState(true);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
   const searchParams = useSearchParams();
   const dateFilter = searchParams.get('date');
 
-  useEffect(() => {
+  const fetchRaces = useCallback(() => {
+    setLoading(true);
     const url = dateFilter === 'today'
       ? `/api/v1/races?date=${new Date().toISOString().slice(0, 10)}`
       : '/api/v1/races';
@@ -27,6 +38,10 @@ export default function RacesPage() {
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
   }, [dateFilter]);
+
+  useEffect(() => {
+    fetchRaces();
+  }, [fetchRaces]);
 
   useEffect(() => {
     const hippodromes = Array.from(new Set(races.map((r) => r.hippodrome).filter(Boolean)));
@@ -50,6 +65,33 @@ export default function RacesPage() {
     }
   };
 
+  const handleSyncFromCasa = async () => {
+    setSyncLoading(true);
+    try {
+      const params = new URLSearchParams({
+        date: syncDate,
+        venue: 'SOREC',
+        add_races: '1',
+      });
+      const r = await api.get<CasaSyncResponse>(`/api/v1/sync/casa-programme?${params}`);
+      if (!r.success || !r.data) throw new Error(r.message);
+      const d = r.data;
+      const total = (d.racesAdded?.length ?? 0) + d.created.length + d.updated.length;
+      if (total > 0) {
+        toast.success(d.message ?? 'Sync done.');
+        fetchRaces();
+      } else if (d.notFound?.length) {
+        toast(`No new data. ${d.notFound.length} race(s) had no results in Casa.`, { icon: 'ℹ️' });
+      } else {
+        toast('No SOREC Maroc races for this date.', { icon: 'ℹ️' });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sync failed');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -69,6 +111,33 @@ export default function RacesPage() {
           Add Race
         </Link>
       </div>
+
+      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
+        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (SOREC Maroc)</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          Import races and results for <strong>Morocco only</strong> from the Casa API. Adds missing races and fills results for finished races.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-400">
+            Date
+            <input
+              type="date"
+              value={syncDate}
+              onChange={(e) => setSyncDate(e.target.value)}
+              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleSyncFromCasa}
+            disabled={syncLoading}
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
+          >
+            {syncLoading ? 'Syncing…' : 'Sync'}
+          </button>
+        </div>
+      </div>
+
       <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden">
         {races.length === 0 ? (
           <div className="p-12 text-center text-gray-400">

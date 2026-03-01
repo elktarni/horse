@@ -33,6 +33,7 @@ interface CasaRace {
 interface CasaMeeting {
   id?: string;
   track: string;
+  country?: string;
   races: CasaRace[];
 }
 
@@ -115,8 +116,8 @@ router.get(
         return;
       }
       const data = (await response.json()) as CasaProgrammeResponse;
-      const meetings = data.meetings || [];
-      // Use UTC day range so date "2026-02-28" matches races stored for that calendar day (API uses same convention)
+      // Only SOREC Maroc (Morocco) meetings – country code MA
+      const meetings = (data.meetings || []).filter((m) => m.country === 'MA');
       const dateStart = new Date(date + 'T00:00:00.000Z');
       const dateEnd = new Date(date + 'T23:59:59.999Z');
 
