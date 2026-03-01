@@ -27,7 +27,7 @@ export default function RacesPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
   const yesterdayStr = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-  const [viewDate, setViewDate] = useState<string | null>(null);
+  const [viewDate, setViewDate] = useState<string | null>('today');
   const [customDate, setCustomDate] = useState(todayStr);
 
   const apiDate = viewDate === 'today' ? todayStr : viewDate === 'yesterday' ? yesterdayStr : viewDate === 'custom' ? customDate : null;
