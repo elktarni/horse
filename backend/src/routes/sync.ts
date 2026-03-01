@@ -10,6 +10,13 @@ router.use(authMiddleware);
 
 const CASA_PROGRAMME_URL = 'https://pro.casacourses.com/api/programme';
 
+/** Casa API finish_order item: object with position + runner number (string or number) */
+interface CasaFinishOrderItem {
+  position?: number;
+  number?: string | number;
+  horse_name?: string;
+}
+
 interface CasaRace {
   id: number;
   code: string;
@@ -18,10 +25,12 @@ interface CasaRace {
   distance: number;
   starters: number;
   finished?: boolean;
-  finish_order?: number[];
+  /** API returns array of objects { position, number, horse_name }, not plain numbers */
+  finish_order?: (number | CasaFinishOrderItem)[];
 }
 
 interface CasaMeeting {
+  id?: string;
   track: string;
   races: CasaRace[];
 }
@@ -29,6 +38,23 @@ interface CasaMeeting {
 interface CasaProgrammeResponse {
   date?: string;
   meetings?: CasaMeeting[];
+}
+
+/**
+ * Normalize Casa finish_order to our arrival array (runner numbers in order of finish).
+ * API can return: [ { position: 1, number: "1" }, { position: 2, number: "5" }, ... ] or legacy [ 1, 5, 4 ].
+ */
+function arrivalFromFinishOrder(finishOrder: (number | CasaFinishOrderItem)[]): number[] {
+  const result: number[] = [];
+  for (const item of finishOrder) {
+    if (typeof item === 'number' && item >= 1) {
+      result.push(item);
+    } else if (item && typeof item === 'object' && item !== null) {
+      const n = typeof item.number === 'number' ? item.number : parseInt(String(item.number), 10);
+      if (!isNaN(n) && n >= 1) result.push(n);
+    }
+  }
+  return result;
 }
 
 /**
@@ -73,8 +99,9 @@ router.get(
       }
       const data = (await response.json()) as CasaProgrammeResponse;
       const meetings = data.meetings || [];
-      const dateObj = new Date(date);
-      dateObj.setHours(0, 0, 0, 0);
+      // Use UTC day range so date "2026-02-28" matches races stored for that calendar day (API uses same convention)
+      const dateStart = new Date(date + 'T00:00:00.000Z');
+      const dateEnd = new Date(date + 'T23:59:59.999Z');
 
       const created: string[] = [];
       const updated: string[] = [];
@@ -96,14 +123,14 @@ router.get(
             continue;
           }
 
-          const arrival = finishOrder.map((n) => Number(n)).filter((n) => !isNaN(n) && n >= 1);
+          const arrival = arrivalFromFinishOrder(finishOrder);
           if (arrival.length === 0) {
             skipped.push(`${track} ${race.code} (empty finish_order)`);
             continue;
           }
 
           const ourRace = await Race.findOne({
-            date: { $gte: dateObj, $lt: new Date(dateObj.getTime() + 24 * 60 * 60 * 1000) },
+            date: { $gte: dateStart, $lte: dateEnd },
             hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
             race_number: raceNumber,
           });
