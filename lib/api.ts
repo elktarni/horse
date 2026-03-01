@@ -72,6 +72,8 @@ export interface Race {
   purse?: number;
   pursecurrency?: string;
   weather_temp?: number;
+  /** Weather temp from race (same source for races and results APIs) */
+  weather?: number | null;
   participants: { number: number; horse: string; jockey: string; weight: number }[];
   status?: RaceStatus;
 }

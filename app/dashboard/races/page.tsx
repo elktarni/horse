@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-type WeatherMap = Record<string, { temp: number; unit: string } | null>;
-
 interface CasaSyncResponse {
   racesAdded?: string[];
   created: string[];
@@ -19,7 +17,6 @@ interface CasaSyncResponse {
 
 export default function RacesPage() {
   const [races, setRaces] = useState<Race[]>([]);
-  const [weather, setWeather] = useState<WeatherMap>({});
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -48,17 +45,6 @@ export default function RacesPage() {
   useEffect(() => {
     fetchRaces();
   }, [fetchRaces]);
-
-  useEffect(() => {
-    const hippodromes = Array.from(new Set(races.map((r) => r.hippodrome).filter(Boolean)));
-    if (hippodromes.length === 0) return;
-    api
-      .post<WeatherMap>('/api/v1/weather/batch', { locations: hippodromes })
-      .then((r) => {
-        if (r.success && r.data) setWeather(r.data);
-      })
-      .catch(() => {});
-  }, [races]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this race?')) return;
@@ -318,11 +304,9 @@ export default function RacesPage() {
                       {race.participants?.length ? race.participants.length : '—'}
                     </td>
                     <td className="p-4 text-sm">
-                      {weather[race.hippodrome] === undefined
-                        ? '…'
-                        : weather[race.hippodrome]
-                          ? `${weather[race.hippodrome]!.temp} °C`
-                          : '—'}
+                      {race.weather != null && Number.isFinite(race.weather)
+                        ? `${Number(race.weather)} °C`
+                        : '—'}
                     </td>
                     <td className="p-4 flex gap-2">
                       <Link
