@@ -25,6 +25,7 @@ interface CasaRace {
   distance: number;
   starters: number;
   finished?: boolean;
+  pursecurrency?: string;
   /** API returns array of objects { position, number, horse_name }, not plain numbers */
   finish_order?: (number | CasaFinishOrderItem)[];
 }
@@ -70,6 +71,20 @@ function raceNumberFromCode(code: string | undefined): number {
   return isNaN(num) ? 0 : num;
 }
 
+/** Slug for track name so we can build unique _id when multiple tracks per day (e.g. "Settat" -> "settat"). */
+function slugTrack(track: string): string {
+  return track
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+/** Unique race id for Casa-imported races (allows multiple tracks same day). */
+function casaRaceId(dateStr: string, raceNumber: number, track: string): string {
+  return `${dateStr}-${slugTrack(track)}-${raceNumber}`;
+}
+
 /**
  * GET /api/v1/sync/casa-programme?date=YYYY-MM-DD&venue=SOREC
  * Fetches programme from Casa API and creates/updates Results for finished races
@@ -80,6 +95,7 @@ router.get(
   [
     query('date').isISO8601().withMessage('date must be YYYY-MM-DD'),
     query('venue').optional().trim(),
+    query('add_races').optional().isIn(['1', 'true', 'yes']),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -90,6 +106,7 @@ router.get(
       }
       const date = req.query.date as string;
       const venue = (req.query.venue as string) || 'SOREC';
+      const addRaces = ['1', 'true', 'yes'].includes(String(req.query.add_races || '').toLowerCase());
       const url = `${CASA_PROGRAMME_URL}?date=${encodeURIComponent(date)}&venue=${encodeURIComponent(venue)}`;
 
       const response = await fetch(url);
@@ -103,10 +120,45 @@ router.get(
       const dateStart = new Date(date + 'T00:00:00.000Z');
       const dateEnd = new Date(date + 'T23:59:59.999Z');
 
+      const racesAdded: string[] = [];
       const created: string[] = [];
       const updated: string[] = [];
       const skipped: string[] = [];
       const notFound: string[] = [];
+
+      if (addRaces) {
+        for (const meeting of meetings) {
+          const track = meeting.track?.trim() || '';
+          if (!track) continue;
+          for (const race of meeting.races || []) {
+            const raceNumber = raceNumberFromCode(race.code);
+            if (raceNumber <= 0) continue;
+            const existingRace = await Race.findOne({
+              date: { $gte: dateStart, $lte: dateEnd },
+              hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+              race_number: raceNumber,
+            });
+            if (existingRace) continue;
+            const _id = casaRaceId(date, raceNumber, track);
+            if (await Race.findById(_id)) continue;
+            const time = (race.time_hm && String(race.time_hm).trim()) || '00:00';
+            const purseCurrency = (race.pursecurrency && String(race.pursecurrency).trim()) || 'Dh';
+            await Race.create({
+              _id,
+              date: dateStart,
+              hippodrome: track,
+              race_number: raceNumber,
+              time,
+              distance: Number(race.distance) || 0,
+              title: (race.name && String(race.name).trim()) || `Race ${raceNumber}`,
+              purse: 0,
+              pursecurrency: purseCurrency,
+              participants: [],
+            });
+            racesAdded.push(_id);
+          }
+        }
+      }
 
       for (const meeting of meetings) {
         const track = meeting.track?.trim() || '';
@@ -160,8 +212,13 @@ router.get(
         }
       }
 
-      const message = `Synced: ${created.length} created, ${updated.length} updated; ${notFound.length} races not found in DB.`;
-      apiResponse(res, true, { created, updated, skipped, notFound, message }, message);
+      const parts: string[] = [];
+      if (racesAdded.length) parts.push(`${racesAdded.length} race(s) added`);
+      parts.push(`${created.length} result(s) created`);
+      parts.push(`${updated.length} result(s) updated`);
+      if (notFound.length) parts.push(`${notFound.length} not found in DB`);
+      const message = parts.join('; ') + '.';
+      apiResponse(res, true, { racesAdded, created, updated, skipped, notFound, message }, message);
     } catch (err) {
       console.error('Sync casa-programme error:', err);
       apiResponse(res, false, null, err instanceof Error ? err.message : 'Sync failed', 500);
