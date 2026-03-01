@@ -10,11 +10,15 @@ router.use(authMiddleware);
 
 const CASA_PROGRAMME_URL = 'https://pro.casacourses.com/api/programme';
 
-/** Known SOREC Morocco tracks – only these are allowed (country code can be missing/wrong in API). */
+/** Official Morocco hippodromes only (country code can be missing/wrong in API). */
 const MOROCCO_TRACKS = new Set([
-  'settat', 'marrakech', 'casablanca', 'rabat', 'meknès', 'meknes', 'tanger', 'tangier',
-  'fès', 'fes', 'fez', 'oujda', 'agadir', 'kenitra', 'tétouan', 'tetouan', 'el jadida',
-  'safi', 'mohammedia',
+  'casablanca', 'anfa',           // Hippodrome de Casablanca – Anfa
+  'rabat',                        // Hippodrome de Rabat
+  'el jadida', 'eljadida',        // Hippodrome d'El Jadida
+  'settat',                       // Hippodrome de Settat
+  'meknès', 'meknes',             // Hippodrome de Meknès
+  'khemisset',                    // Hippodrome de Khemisset
+  'marrakech',                    // Hippodrome de Marrakech
 ]);
 function isMoroccoMeeting(meeting: CasaMeeting): boolean {
   const country = String(meeting.country ?? '').trim().toUpperCase();
