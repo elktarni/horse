@@ -31,9 +31,16 @@ interface CasaProgrammeResponse {
   meetings?: CasaMeeting[];
 }
 
-/** Parse race code (e.g. "C1", "C2") to race number */
-function raceNumberFromCode(code: string): number {
-  const num = parseInt(code.replace(/\D/g, ''), 10);
+/**
+ * Map Casa API "code" (e.g. "C8", "C12") to our race_number (8, 12).
+ * API uses "C1", "C2", "C8" etc.; we store and match on numeric race_number only.
+ */
+function raceNumberFromCode(code: string | undefined): number {
+  if (code == null || typeof code !== 'string') return 0;
+  const trimmed = code.trim();
+  const match = trimmed.match(/^C(\d+)$/i);
+  if (match) return parseInt(match[1], 10);
+  const num = parseInt(trimmed.replace(/\D/g, ''), 10);
   return isNaN(num) ? 0 : num;
 }
 
