@@ -27,6 +27,15 @@ function isMoroccoMeeting(meeting: CasaMeeting): boolean {
   return MOROCCO_TRACKS.has(track) || MOROCCO_TRACKS.has(track.replace(/\s/g, ''));
 }
 
+/** Anfa and Casablanca are the same venue – always use one canonical name so we get a single set of races. */
+const CASABLANCA_ANFA_ALIASES = new Set(['anfa', 'casablanca', 'casablanca anfa', 'anfa casablanca']);
+function getCanonicalTrack(apiTrack: string): string {
+  const t = (apiTrack ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!t) return apiTrack?.trim() || '';
+  if (CASABLANCA_ANFA_ALIASES.has(t) || CASABLANCA_ANFA_ALIASES.has(t.replace(/\s/g, ''))) return 'Casablanca';
+  return apiTrack.trim();
+}
+
 /** Casa API finish_order item: object with position + runner number (string or number) */
 interface CasaFinishOrderItem {
   position?: number;
@@ -146,8 +155,9 @@ router.get(
 
       if (addRaces) {
         for (const meeting of meetings) {
-          const track = meeting.track?.trim() || '';
-          if (!track) continue;
+          const apiTrack = meeting.track?.trim() || '';
+          if (!apiTrack) continue;
+          const track = getCanonicalTrack(apiTrack);
           for (const race of meeting.races || []) {
             const raceNumber = raceNumberFromCode(race.code);
             if (raceNumber <= 0) continue;
@@ -179,8 +189,9 @@ router.get(
       }
 
       for (const meeting of meetings) {
-        const track = meeting.track?.trim() || '';
-        if (!track) continue;
+        const apiTrack = meeting.track?.trim() || '';
+        if (!apiTrack) continue;
+        const track = getCanonicalTrack(apiTrack);
 
         for (const race of meeting.races || []) {
           const finished = race.finished === true;
