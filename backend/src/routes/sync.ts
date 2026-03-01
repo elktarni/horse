@@ -58,10 +58,11 @@ function mapRunnersToParticipants(runners: CasaRunner[] | undefined): { number: 
     .filter((p) => p.number >= 1);
 }
 
-/** Fetch race detail from Casa (purse + participants + weather) for a given Casa race id */
-async function fetchCasaRaceDetails(casaRaceId: number): Promise<{ purse?: number; pursecurrency?: string; weather_temp?: number; participants: { number: number; horse: string; jockey: string; weight: number }[] } | null> {
+/** Fetch race detail from Casa (purse + participants + weather) for a given Casa race id. Optionally pass date for URL: /api/race/{id}?date=YYYY-MM-DD */
+async function fetchCasaRaceDetails(casaRaceId: number, date?: string): Promise<{ purse?: number; pursecurrency?: string; weather_temp?: number; participants: { number: number; horse: string; jockey: string; weight: number }[] } | null> {
   try {
-    const res = await fetch(`${CASA_RACE_URL}/${casaRaceId}`);
+    const url = date ? `${CASA_RACE_URL}/${casaRaceId}?date=${encodeURIComponent(date)}` : `${CASA_RACE_URL}/${casaRaceId}`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = (await res.json()) as CasaRaceDetailResponse;
     const prize = parsePrize(data.prize);
@@ -245,7 +246,7 @@ export async function runCasaProgrammeSync(options: {
           participants: [],
         });
         racesAdded.push(_id);
-        const details = await fetchCasaRaceDetails(race.id);
+        const details = await fetchCasaRaceDetails(race.id, date);
         if (details && (details.purse != null || details.weather_temp != null || details.participants?.length)) {
           const update: Record<string, unknown> = {};
           if (details.purse != null) update.purse = Math.round(details.purse / 100);
@@ -272,7 +273,7 @@ export async function runCasaProgrammeSync(options: {
         race_number: raceNumber,
       });
       if (!ourRace) continue;
-      const details = await fetchCasaRaceDetails(race.id);
+      const details = await fetchCasaRaceDetails(race.id, date);
       if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
         if (details.purse != null) update.purse = Math.round(details.purse / 100);
@@ -312,7 +313,7 @@ export async function runCasaProgrammeSync(options: {
         continue;
       }
       // Enrich race with purse, participants, weather from Casa race detail API (for both new and existing races)
-      const details = await fetchCasaRaceDetails(race.id);
+      const details = await fetchCasaRaceDetails(race.id, date);
       if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
         if (details.purse != null) update.purse = Math.round(details.purse / 100);
