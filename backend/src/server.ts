@@ -10,6 +10,7 @@ import racesRoutes from './routes/races';
 import resultsRoutes from './routes/results';
 import uploadRoutes from './routes/upload';
 import weatherRoutes from './routes/weather';
+import syncRoutes from './routes/sync';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -41,6 +42,7 @@ app.use('/api/v1/races', racesRoutes);
 app.use('/api/v1/results', resultsRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/weather', weatherRoutes);
+app.use('/api/v1/sync', syncRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok' }, message: 'API healthy' });

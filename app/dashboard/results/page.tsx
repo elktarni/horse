@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, type Result } from '@/lib/api';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface ResultRow {
@@ -12,9 +12,20 @@ interface ResultRow {
   _id?: string;
 }
 
+interface CasaSyncResponse {
+  created: string[];
+  updated: string[];
+  skipped: string[];
+  notFound: string[];
+  message: string;
+}
+
 export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [syncVenue, setSyncVenue] = useState('SOREC');
 
   const fetchResults = useCallback(() => {
     setLoading(true);
@@ -49,6 +60,30 @@ export default function ResultsPage() {
     }
   };
 
+  const handleSyncFromCasa = async () => {
+    setSyncLoading(true);
+    try {
+      const params = new URLSearchParams({ date: syncDate });
+      if (syncVenue.trim()) params.set('venue', syncVenue.trim());
+      const r = await api.get<CasaSyncResponse>(`/api/v1/sync/casa-programme?${params}`);
+      if (!r.success || !r.data) throw new Error(r.message);
+      const d = r.data;
+      const total = d.created.length + d.updated.length;
+      if (total > 0) {
+        toast.success(d.message || `Synced: ${d.created.length} created, ${d.updated.length} updated`);
+        fetchResults();
+      } else if (d.notFound.length > 0) {
+        toast(`No finished races synced. ${d.notFound.length} race(s) not found in your DB (add races first).`, { icon: 'ℹ️' });
+      } else {
+        toast('No finished races for this date/venue in Casa programme.', { icon: 'ℹ️' });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sync failed');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -68,6 +103,45 @@ export default function ResultsPage() {
           Add Result
         </Link>
       </div>
+
+      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
+        <h2 className="text-sm font-medium text-gray-400 mb-3">Sync from Casa Courses</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          Fetch programme from{' '}
+          <a href="https://pro.casacourses.com/api/programme" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Casa Courses API</a>
+          {' '}and create/update results for finished races that match your existing races (same date, hippodrome, race number).
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-400">
+            Date
+            <input
+              type="date"
+              value={syncDate}
+              onChange={(e) => setSyncDate(e.target.value)}
+              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-400">
+            Venue
+            <input
+              type="text"
+              value={syncVenue}
+              onChange={(e) => setSyncVenue(e.target.value)}
+              placeholder="SOREC"
+              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm w-28"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleSyncFromCasa}
+            disabled={syncLoading}
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
+          >
+            {syncLoading ? 'Syncing…' : 'Sync results'}
+          </button>
+        </div>
+      </div>
+
       <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden">
         {results.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
