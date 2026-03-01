@@ -10,6 +10,19 @@ router.use(authMiddleware);
 
 const CASA_PROGRAMME_URL = 'https://pro.casacourses.com/api/programme';
 
+/** Known SOREC Morocco tracks – only these are allowed (country code can be missing/wrong in API). */
+const MOROCCO_TRACKS = new Set([
+  'settat', 'marrakech', 'casablanca', 'rabat', 'meknès', 'meknes', 'tanger', 'tangier',
+  'fès', 'fes', 'fez', 'oujda', 'agadir', 'kenitra', 'tétouan', 'tetouan', 'el jadida',
+  'safi', 'mohammedia',
+]);
+function isMoroccoMeeting(meeting: CasaMeeting): boolean {
+  const country = String(meeting.country ?? '').trim().toUpperCase();
+  if (country === 'MA') return true;
+  const track = (meeting.track ?? '').trim().toLowerCase();
+  return track.length > 0 && MOROCCO_TRACKS.has(track);
+}
+
 /** Casa API finish_order item: object with position + runner number (string or number) */
 interface CasaFinishOrderItem {
   position?: number;
@@ -116,8 +129,8 @@ router.get(
         return;
       }
       const data = (await response.json()) as CasaProgrammeResponse;
-      // Only SOREC Maroc (Morocco) meetings – country code MA
-      const meetings = (data.meetings || []).filter((m) => m.country === 'MA');
+      // Only SOREC Maroc (Morocco): by country code MA or by known Morocco track name
+      const meetings = (data.meetings || []).filter((m) => isMoroccoMeeting(m));
       const dateStart = new Date(date + 'T00:00:00.000Z');
       const dateEnd = new Date(date + 'T23:59:59.999Z');
 
