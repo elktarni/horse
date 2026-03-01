@@ -27,10 +27,11 @@ export default function RacesPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
   const yesterdayStr = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const tomorrowStr = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
   const [viewDate, setViewDate] = useState<string | null>('today');
   const [customDate, setCustomDate] = useState(todayStr);
 
-  const apiDate = viewDate === 'today' ? todayStr : viewDate === 'yesterday' ? yesterdayStr : viewDate === 'custom' ? customDate : null;
+  const apiDate = viewDate === 'today' ? todayStr : viewDate === 'yesterday' ? yesterdayStr : viewDate === 'tomorrow' ? tomorrowStr : viewDate === 'custom' ? customDate : null;
 
   const fetchRaces = useCallback(() => {
     setLoading(true);
@@ -189,6 +190,13 @@ export default function RacesPage() {
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'yesterday' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
         >
           Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewDate('tomorrow')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'tomorrow' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          Tomorrow
         </button>
         <button
           type="button"

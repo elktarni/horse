@@ -12,6 +12,13 @@ body {
   @apply bg-dark-900 text-gray-100 antialiased;
 }
 
+/* Date input: make calendar icon visible on dark background */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
