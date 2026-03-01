@@ -11,6 +11,7 @@ import resultsRoutes from './routes/results';
 import uploadRoutes from './routes/upload';
 import weatherRoutes from './routes/weather';
 import syncRoutes, { runCasaProgrammeSync } from './routes/sync';
+import publicRoutes from './routes/public';
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.get('/api/v1/health', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/races', racesRoutes);
 app.use('/api/v1/results', resultsRoutes);
 app.use('/api/v1/upload', uploadRoutes);
