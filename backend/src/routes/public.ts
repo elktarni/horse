@@ -82,7 +82,7 @@ router.get(
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title' } },
+        { $addFields: { title: '$race.title', weather: '$race.weather_temp' } },
       ];
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');
@@ -105,12 +105,14 @@ router.get(
   [param('race_id').notEmpty().withMessage('race_id required')],
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await Result.findOne({ race_id: req.params.race_id });
+      const result = await Result.findOne({ race_id: req.params.race_id }).lean();
       if (!result) {
         apiResponse(res, false, null, 'Result not found', 404);
         return;
       }
-      apiResponse(res, true, result, 'Result retrieved');
+      const race = await Race.findById(result.race_id).select('weather_temp').lean();
+      const payload = { ...result, weather: race?.weather_temp ?? null };
+      apiResponse(res, true, payload, 'Result retrieved');
     } catch (err) {
       console.error('GET public result error:', err);
       apiResponse(res, false, null, 'Server error', 500);
