@@ -45,6 +45,23 @@ app.get('/api/v1/health', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+// Welcome route (no API key): GET /api/v1/public or /api/v1/public/
+app.get(['/api/v1/public', '/api/v1/public/'], (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      message: 'Public API. Send header x-api-key to access endpoints.',
+      endpoints: {
+        health: 'GET /api/v1/public/health',
+        races: 'GET /api/v1/public/races (?date=YYYY-MM-DD)',
+        race: 'GET /api/v1/public/races/:id',
+        results: 'GET /api/v1/public/results (?date=YYYY-MM-DD)',
+        result: 'GET /api/v1/public/results/:race_id',
+      },
+    },
+    message: 'Public API v1',
+  });
+});
 app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/races', racesRoutes);
 app.use('/api/v1/results', resultsRoutes);
