@@ -112,10 +112,127 @@ function casaRaceId(dateStr: string, raceNumber: number, track: string): string 
   return `${dateStr}-${slugTrack(track)}-${raceNumber}`;
 }
 
+export interface CasaSyncResult {
+  racesAdded: string[];
+  created: string[];
+  updated: string[];
+  skipped: string[];
+  notFound: string[];
+  message: string;
+}
+
+/** Run Casa programme sync (used by GET route and by server auto-sync). */
+export async function runCasaProgrammeSync(options: {
+  date: string;
+  venue?: string;
+  addRaces?: boolean;
+}): Promise<CasaSyncResult> {
+  const { date, venue = 'SOREC', addRaces = false } = options;
+  const url = `${CASA_PROGRAMME_URL}?date=${encodeURIComponent(date)}&venue=${encodeURIComponent(venue)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Casa API error: ${response.status}`);
+  const data = (await response.json()) as CasaProgrammeResponse;
+  const meetings = (data.meetings || []).filter((m) => isMoroccoMeeting(m));
+  const dateStart = new Date(date + 'T00:00:00.000Z');
+  const dateEnd = new Date(date + 'T23:59:59.999Z');
+
+  const racesAdded: string[] = [];
+  const created: string[] = [];
+  const updated: string[] = [];
+  const skipped: string[] = [];
+  const notFound: string[] = [];
+
+  if (addRaces) {
+    for (const meeting of meetings) {
+      const apiTrack = meeting.track?.trim() || '';
+      if (!apiTrack) continue;
+      const track = getCanonicalTrack(apiTrack);
+      for (const race of meeting.races || []) {
+        const raceNumber = raceNumberFromCode(race.code);
+        if (raceNumber <= 0) continue;
+        const existingRace = await Race.findOne({
+          date: { $gte: dateStart, $lte: dateEnd },
+          hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+          race_number: raceNumber,
+        });
+        if (existingRace) continue;
+        const _id = casaRaceId(date, raceNumber, track);
+        if (await Race.findById(_id)) continue;
+        const time = (race.time_hm && String(race.time_hm).trim()) || '00:00';
+        const purseCurrency = (race.pursecurrency && String(race.pursecurrency).trim()) || 'Dh';
+        await Race.create({
+          _id,
+          date: dateStart,
+          hippodrome: track,
+          race_number: raceNumber,
+          time,
+          distance: Number(race.distance) || 0,
+          title: (race.name && String(race.name).trim()) || `Race ${raceNumber}`,
+          purse: 0,
+          pursecurrency: purseCurrency,
+          participants: [],
+        });
+        racesAdded.push(_id);
+      }
+    }
+  }
+
+  for (const meeting of meetings) {
+    const apiTrack = meeting.track?.trim() || '';
+    if (!apiTrack) continue;
+    const track = getCanonicalTrack(apiTrack);
+    for (const race of meeting.races || []) {
+      const finished = race.finished === true;
+      const finishOrder = Array.isArray(race.finish_order) ? race.finish_order : [];
+      if (!finished || finishOrder.length === 0) continue;
+      const raceNumber = raceNumberFromCode(race.code);
+      if (raceNumber <= 0) {
+        skipped.push(`${track} ${race.code}`);
+        continue;
+      }
+      const arrival = arrivalFromFinishOrder(finishOrder);
+      if (arrival.length === 0) {
+        skipped.push(`${track} ${race.code} (empty finish_order)`);
+        continue;
+      }
+      const ourRace = await Race.findOne({
+        date: { $gte: dateStart, $lte: dateEnd },
+        hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        race_number: raceNumber,
+      });
+      if (!ourRace) {
+        notFound.push(`${track} C${raceNumber} (${race.name})`);
+        continue;
+      }
+      const existing = await Result.findOne({ race_id: ourRace._id });
+      if (existing) {
+        await Result.updateOne({ race_id: ourRace._id }, { $set: { arrival } });
+        updated.push(ourRace._id);
+      } else {
+        await Result.create({
+          race_id: ourRace._id,
+          arrival,
+          rapports: {},
+          simple: {},
+          couple: {},
+          trio: {},
+        });
+        created.push(ourRace._id);
+      }
+    }
+  }
+
+  const parts: string[] = [];
+  if (racesAdded.length) parts.push(`${racesAdded.length} race(s) added`);
+  parts.push(`${created.length} result(s) created`);
+  parts.push(`${updated.length} result(s) updated`);
+  if (notFound.length) parts.push(`${notFound.length} not found in DB`);
+  return { racesAdded, created, updated, skipped, notFound, message: parts.join('; ') + '.' };
+}
+
 /**
  * GET /api/v1/sync/casa-programme?date=YYYY-MM-DD&venue=SOREC
- * Fetches programme from Casa API and creates/updates Results for finished races
- * by matching our races on date + hippodrome (track) + race_number.
+ * Fetches programme from Casa API and creates/updates Results for finished races.
  */
 router.get(
   '/casa-programme',
@@ -134,120 +251,8 @@ router.get(
       const date = req.query.date as string;
       const venue = (req.query.venue as string) || 'SOREC';
       const addRaces = ['1', 'true', 'yes'].includes(String(req.query.add_races || '').toLowerCase());
-      const url = `${CASA_PROGRAMME_URL}?date=${encodeURIComponent(date)}&venue=${encodeURIComponent(venue)}`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        apiResponse(res, false, null, `Casa API error: ${response.status}`, 502);
-        return;
-      }
-      const data = (await response.json()) as CasaProgrammeResponse;
-      // Only SOREC Maroc (Morocco): by country code MA or by known Morocco track name
-      const meetings = (data.meetings || []).filter((m) => isMoroccoMeeting(m));
-      const dateStart = new Date(date + 'T00:00:00.000Z');
-      const dateEnd = new Date(date + 'T23:59:59.999Z');
-
-      const racesAdded: string[] = [];
-      const created: string[] = [];
-      const updated: string[] = [];
-      const skipped: string[] = [];
-      const notFound: string[] = [];
-
-      if (addRaces) {
-        for (const meeting of meetings) {
-          const apiTrack = meeting.track?.trim() || '';
-          if (!apiTrack) continue;
-          const track = getCanonicalTrack(apiTrack);
-          for (const race of meeting.races || []) {
-            const raceNumber = raceNumberFromCode(race.code);
-            if (raceNumber <= 0) continue;
-            const existingRace = await Race.findOne({
-              date: { $gte: dateStart, $lte: dateEnd },
-              hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-              race_number: raceNumber,
-            });
-            if (existingRace) continue;
-            const _id = casaRaceId(date, raceNumber, track);
-            if (await Race.findById(_id)) continue;
-            const time = (race.time_hm && String(race.time_hm).trim()) || '00:00';
-            const purseCurrency = (race.pursecurrency && String(race.pursecurrency).trim()) || 'Dh';
-            await Race.create({
-              _id,
-              date: dateStart,
-              hippodrome: track,
-              race_number: raceNumber,
-              time,
-              distance: Number(race.distance) || 0,
-              title: (race.name && String(race.name).trim()) || `Race ${raceNumber}`,
-              purse: 0,
-              pursecurrency: purseCurrency,
-              participants: [],
-            });
-            racesAdded.push(_id);
-          }
-        }
-      }
-
-      for (const meeting of meetings) {
-        const apiTrack = meeting.track?.trim() || '';
-        if (!apiTrack) continue;
-        const track = getCanonicalTrack(apiTrack);
-
-        for (const race of meeting.races || []) {
-          const finished = race.finished === true;
-          const finishOrder = Array.isArray(race.finish_order) ? race.finish_order : [];
-          if (!finished || finishOrder.length === 0) continue;
-
-          const raceNumber = raceNumberFromCode(race.code);
-          if (raceNumber <= 0) {
-            skipped.push(`${track} ${race.code}`);
-            continue;
-          }
-
-          const arrival = arrivalFromFinishOrder(finishOrder);
-          if (arrival.length === 0) {
-            skipped.push(`${track} ${race.code} (empty finish_order)`);
-            continue;
-          }
-
-          const ourRace = await Race.findOne({
-            date: { $gte: dateStart, $lte: dateEnd },
-            hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-            race_number: raceNumber,
-          });
-          if (!ourRace) {
-            notFound.push(`${track} C${raceNumber} (${race.name})`);
-            continue;
-          }
-
-          const existing = await Result.findOne({ race_id: ourRace._id });
-          if (existing) {
-            await Result.updateOne(
-              { race_id: ourRace._id },
-              { $set: { arrival } }
-            );
-            updated.push(ourRace._id);
-          } else {
-            await Result.create({
-              race_id: ourRace._id,
-              arrival,
-              rapports: {},
-              simple: {},
-              couple: {},
-              trio: {},
-            });
-            created.push(ourRace._id);
-          }
-        }
-      }
-
-      const parts: string[] = [];
-      if (racesAdded.length) parts.push(`${racesAdded.length} race(s) added`);
-      parts.push(`${created.length} result(s) created`);
-      parts.push(`${updated.length} result(s) updated`);
-      if (notFound.length) parts.push(`${notFound.length} not found in DB`);
-      const message = parts.join('; ') + '.';
-      apiResponse(res, true, { racesAdded, created, updated, skipped, notFound, message }, message);
+      const result = await runCasaProgrammeSync({ date, venue, addRaces });
+      apiResponse(res, true, result, result.message);
     } catch (err) {
       console.error('Sync casa-programme error:', err);
       apiResponse(res, false, null, err instanceof Error ? err.message : 'Sync failed', 500);

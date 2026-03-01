@@ -187,6 +187,9 @@ export default function ResultsPage() {
             {syncLoading ? 'Syncing…' : 'Sync results'}
           </button>
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Server auto-syncs results every 10 min (even when you leave or log out).
+        </p>
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden">
