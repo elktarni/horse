@@ -18,16 +18,18 @@ export default function NewResultPage() {
   const [couple, setCouple] = useState('');
   const [trio, setTrio] = useState('');
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
     api
-      .get<Race[]>('/api/v1/races')
+      .get<Race[]>(`/api/v1/races?date=${todayStr}`)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setRaces(r.data);
         if (r.success && Array.isArray(r.data) && r.data.length) setRaceId(r.data[0]._id);
       })
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [todayStr]);
 
   const parseKeyValue = (s: string): Record<string, number> => {
     const out: Record<string, number> = {};
@@ -82,7 +84,7 @@ export default function NewResultPage() {
       </div>
       <form onSubmit={handleSubmit} className="bg-dark-800 rounded-xl border border-dark-600 p-6 space-y-6">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Race</label>
+          <label className="block text-sm text-gray-400 mb-1">Race (today&apos;s races only)</label>
           <select
             required
             value={raceId}
