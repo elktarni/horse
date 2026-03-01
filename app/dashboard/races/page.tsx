@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
+
+type EditableField = 'time' | 'distance' | 'title' | 'purse';
 
 type WeatherMap = Record<string, { temp: number; unit: string } | null>;
 
@@ -30,6 +32,9 @@ export default function RacesPage() {
   const tomorrowStr = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
   const [viewDate, setViewDate] = useState<string | null>('today');
   const [customDate, setCustomDate] = useState(todayStr);
+  const [editingCell, setEditingCell] = useState<{ raceId: string; field: EditableField } | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const apiDate = viewDate === 'today' ? todayStr : viewDate === 'yesterday' ? yesterdayStr : viewDate === 'tomorrow' ? tomorrowStr : viewDate === 'custom' ? customDate : null;
 
@@ -85,6 +90,75 @@ export default function RacesPage() {
       return next;
     });
   };
+
+  const getDisplayValue = useCallback((race: Race, field: EditableField): string => {
+    switch (field) {
+      case 'time':
+        return race.time ?? '';
+      case 'distance':
+        return String(race.distance ?? '');
+      case 'title':
+        return race.title ?? '';
+      case 'purse':
+        return race.purse != null && race.purse > 0
+          ? String(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse)
+          : '';
+      default:
+        return '';
+    }
+  }, []);
+
+  const startEditing = useCallback((race: Race, field: EditableField) => {
+    setEditingCell({ raceId: race._id, field });
+    setEditingValue(getDisplayValue(race, field));
+  }, [getDisplayValue]);
+
+  useEffect(() => {
+    if (editingCell) inputRef.current?.focus();
+  }, [editingCell]);
+
+  const cancelEditing = useCallback(() => {
+    setEditingCell(null);
+    setEditingValue('');
+  }, []);
+
+  const saveEditing = useCallback(async () => {
+    if (!editingCell) return;
+    const race = races.find((r) => r._id === editingCell.raceId);
+    if (!race) return cancelEditing();
+
+    let payload: Partial<Race> = {};
+    if (editingCell.field === 'time') {
+      const v = editingValue.trim();
+      if (!v) return cancelEditing();
+      payload.time = v;
+    } else if (editingCell.field === 'distance') {
+      const n = parseInt(editingValue.trim(), 10);
+      if (Number.isNaN(n) || n < 1) return cancelEditing();
+      payload.distance = n;
+    } else if (editingCell.field === 'title') {
+      const v = editingValue.trim();
+      if (!v) return cancelEditing();
+      payload.title = v;
+    } else if (editingCell.field === 'purse') {
+      const n = parseFloat(editingValue.replace(/\s/g, '').replace(',', '.'));
+      if (Number.isNaN(n) || n < 0) return cancelEditing();
+      payload.purse = n;
+      payload.pursecurrency = race.pursecurrency ?? 'Dh';
+    }
+    if (Object.keys(payload).length === 0) return cancelEditing();
+
+    try {
+      const res = await api.put<Race>(`/api/v1/races/${editingCell.raceId}`, payload);
+      if (res.success && res.data) {
+        setRaces((prev) => prev.map((r) => (r._id === editingCell.raceId ? { ...r, ...res.data } : r)));
+        toast.success('Saved');
+      }
+    } catch {
+      toast.error('Failed to save');
+    }
+    cancelEditing();
+  }, [editingCell, editingValue, races, cancelEditing]);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
@@ -307,13 +381,89 @@ export default function RacesPage() {
                       </span>
                     </td>
                     <td className="p-4">{race.race_number}</td>
-                    <td className="p-4">{race.time}</td>
-                    <td className="p-4">{race.distance}m</td>
-                    <td className="p-4 max-w-[200px] truncate">{race.title}</td>
-                    <td className="p-4 text-sm">
-                      {race.purse != null && race.purse > 0
-                        ? `${Number(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
-                        : '—'}
+                    <td
+                      className="p-4 cursor-text"
+                      onDoubleClick={() => startEditing(race, 'time')}
+                      title="Double-click to edit"
+                    >
+                      {editingCell?.raceId === race._id && editingCell?.field === 'time' ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-full min-w-[4rem] rounded border border-dark-500 bg-dark-700 px-2 py-1 text-sm text-white focus:border-accent focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        race.time
+                      )}
+                    </td>
+                    <td
+                      className="p-4 cursor-text"
+                      onDoubleClick={() => startEditing(race, 'distance')}
+                      title="Double-click to edit"
+                    >
+                      {editingCell?.raceId === race._id && editingCell?.field === 'distance' ? (
+                        <input
+                          ref={inputRef}
+                          type="number"
+                          min={1}
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-20 rounded border border-dark-500 bg-dark-700 px-2 py-1 text-sm text-white focus:border-accent focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        `${race.distance}m`
+                      )}
+                    </td>
+                    <td
+                      className="p-4 max-w-[200px] cursor-text"
+                      onDoubleClick={() => startEditing(race, 'title')}
+                      title="Double-click to edit"
+                    >
+                      {editingCell?.raceId === race._id && editingCell?.field === 'title' ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-full min-w-[8rem] rounded border border-dark-500 bg-dark-700 px-2 py-1 text-sm text-white focus:border-accent focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className="truncate block">{race.title}</span>
+                      )}
+                    </td>
+                    <td
+                      className="p-4 text-sm cursor-text"
+                      onDoubleClick={() => startEditing(race, 'purse')}
+                      title="Double-click to edit"
+                    >
+                      {editingCell?.raceId === race._id && editingCell?.field === 'purse' ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          inputMode="numeric"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-24 rounded border border-dark-500 bg-dark-700 px-2 py-1 text-sm text-white focus:border-accent focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        race.purse != null && race.purse > 0
+                          ? `${Number(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
+                          : '—'
+                      )}
                     </td>
                     <td className="p-4 text-sm">
                       {race.participants?.length ? race.participants.length : '—'}
