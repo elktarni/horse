@@ -266,10 +266,10 @@ export default function RacesPage() {
                   <th className="p-4">ID</th>
                   <th className="p-4">Date</th>
                   <th className="p-4">Hippodrome</th>
+                  <th className="p-4">Status</th>
                   <th className="p-4">Race #</th>
                   <th className="p-4">Time</th>
                   <th className="p-4">Distance</th>
-                  <th className="p-4">Status</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Purse</th>
                   <th className="p-4">Participants</th>
@@ -291,9 +291,6 @@ export default function RacesPage() {
                     <td className="p-4 font-mono text-sm">{race._id}</td>
                     <td className="p-4">{new Date(race.date).toLocaleDateString()}</td>
                     <td className="p-4">{race.hippodrome}</td>
-                    <td className="p-4">{race.race_number}</td>
-                    <td className="p-4">{race.time}</td>
-                    <td className="p-4">{race.distance}m</td>
                     <td className="p-4">
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300">
                         <span
@@ -308,6 +305,9 @@ export default function RacesPage() {
                         {race.status ?? '—'}
                       </span>
                     </td>
+                    <td className="p-4">{race.race_number}</td>
+                    <td className="p-4">{race.time}</td>
+                    <td className="p-4">{race.distance}m</td>
                     <td className="p-4 max-w-[200px] truncate">{race.title}</td>
                     <td className="p-4 text-sm">
                       {race.purse != null && race.purse > 0
