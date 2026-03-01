@@ -269,6 +269,7 @@ export default function RacesPage() {
                   <th className="p-4">Race #</th>
                   <th className="p-4">Time</th>
                   <th className="p-4">Distance</th>
+                  <th className="p-4">Status</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Purse</th>
                   <th className="p-4">Participants</th>
@@ -293,6 +294,28 @@ export default function RacesPage() {
                     <td className="p-4">{race.race_number}</td>
                     <td className="p-4">{race.time}</td>
                     <td className="p-4">{race.distance}m</td>
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium animate-in ${
+                          race.status === 'En cours'
+                            ? 'bg-emerald-500/25 text-emerald-400 ring-1 ring-emerald-500/50'
+                            : race.status === 'Terminée'
+                              ? 'bg-red-500/25 text-red-400 ring-1 ring-red-500/50'
+                              : 'bg-gray-500/25 text-gray-400 ring-1 ring-gray-500/50'
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            race.status === 'En cours'
+                              ? 'bg-emerald-400 animate-pulse'
+                              : race.status === 'Terminée'
+                                ? 'bg-red-400'
+                                : 'bg-gray-400'
+                          }`}
+                        />
+                        {race.status ?? '—'}
+                      </span>
+                    </td>
                     <td className="p-4 max-w-[200px] truncate">{race.title}</td>
                     <td className="p-4 text-sm">
                       {race.purse != null && race.purse > 0

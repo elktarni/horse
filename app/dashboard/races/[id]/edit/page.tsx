@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { api, type Race } from '@/lib/api';
+import { api, type Race, type RaceStatus } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface Participant {
@@ -31,6 +31,7 @@ export default function EditRacePage() {
     weather_temp: undefined as number | undefined,
   });
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [raceStatus, setRaceStatus] = useState<RaceStatus | undefined>();
 
   useEffect(() => {
     api
@@ -50,6 +51,7 @@ export default function EditRacePage() {
             weather_temp: d.weather_temp,
           });
           setParticipants(d.participants || []);
+          setRaceStatus(d.status);
         }
       })
       .catch(() => toast.error('Race not found'))
@@ -112,11 +114,29 @@ export default function EditRacePage() {
 
   return (
     <div className="animate-in max-w-3xl">
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-4 mb-8 flex-wrap">
         <Link href="/dashboard/races" className="text-gray-400 hover:text-white">
           ← Races
         </Link>
         <h1 className="text-2xl font-bold text-white">Edit Race</h1>
+        {raceStatus != null && (
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium animate-in ${
+              raceStatus === 'En cours'
+                ? 'bg-emerald-500/25 text-emerald-400 ring-1 ring-emerald-500/50'
+                : raceStatus === 'Terminée'
+                  ? 'bg-red-500/25 text-red-400 ring-1 ring-red-500/50'
+                  : 'bg-gray-500/25 text-gray-400 ring-1 ring-gray-500/50'
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                raceStatus === 'En cours' ? 'bg-emerald-400 animate-pulse' : raceStatus === 'Terminée' ? 'bg-red-400' : 'bg-gray-400'
+              }`}
+            />
+            {raceStatus}
+          </span>
+        )}
       </div>
       <form onSubmit={handleSubmit} className="bg-dark-800 rounded-xl border border-dark-600 p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4">

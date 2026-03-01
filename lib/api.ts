@@ -57,6 +57,9 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
+/** Dynamic status (computed by API from date + time + distance), not stored in DB */
+export type RaceStatus = 'Non commencée' | 'En cours' | 'Terminée';
+
 export interface Race {
   _id: string;
   date: string;
@@ -69,6 +72,7 @@ export interface Race {
   pursecurrency?: string;
   weather_temp?: number;
   participants: { number: number; horse: string; jockey: string; weight: number }[];
+  status?: RaceStatus;
 }
 
 export interface Result {

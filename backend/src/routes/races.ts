@@ -3,6 +3,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import Race from '../models/Race';
 import { apiResponse } from '../middleware/response';
 import { authMiddleware } from '../middleware/auth';
+import { getRaceStatus } from '../utils/raceStatus';
 
 const router = Router();
 router.use(authMiddleware);
@@ -33,8 +34,9 @@ router.get(
         const dateEnd = new Date(dateStr + 'T23:59:59.999Z');
         filter.date = { $gte: dateStart, $lte: dateEnd };
       }
-      const races = await Race.find(filter).sort({ date: -1, race_number: 1 });
-      apiResponse(res, true, races, 'Races retrieved');
+      const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
+      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r) }));
+      apiResponse(res, true, withStatus, 'Races retrieved');
     } catch (err) {
       console.error('GET races error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -52,12 +54,12 @@ router.get(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const race = await Race.findById(req.params.id);
+      const race = await Race.findById(req.params.id).lean();
       if (!race) {
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, race, 'Race retrieved');
+      apiResponse(res, true, { ...race, status: getRaceStatus(race) }, 'Race retrieved');
     } catch (err) {
       console.error('GET race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -97,7 +99,7 @@ router.post(
         return;
       }
 
-      const race = await Race.create({
+      const created = await Race.create({
         _id,
         date: d,
         hippodrome,
@@ -110,7 +112,8 @@ router.post(
         weather_temp: weather_temp != null ? Number(weather_temp) : undefined,
         participants: participants || [],
       });
-      apiResponse(res, true, race, 'Race created', 201);
+      const raceObj = created.toObject();
+      apiResponse(res, true, { ...raceObj, status: getRaceStatus(raceObj) }, 'Race created', 201);
     } catch (err) {
       console.error('POST race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -144,12 +147,12 @@ router.put(
         req.params.id,
         { $set: req.body },
         { new: true, runValidators: true }
-      );
+      ).lean();
       if (!race) {
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, race, 'Race updated');
+      apiResponse(res, true, { ...race, status: getRaceStatus(race) }, 'Race updated');
     } catch (err) {
       console.error('PUT race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
