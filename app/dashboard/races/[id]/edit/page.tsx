@@ -120,17 +120,9 @@ export default function EditRacePage() {
         </Link>
         <h1 className="text-2xl font-bold text-white">Edit Race</h1>
         {raceStatus != null && (
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium animate-in ${
-              raceStatus === 'En cours'
-                ? 'bg-emerald-500/25 text-emerald-400 ring-1 ring-emerald-500/50'
-                : raceStatus === 'Terminée'
-                  ? 'bg-red-500/25 text-red-400 ring-1 ring-red-500/50'
-                  : 'bg-gray-500/25 text-gray-400 ring-1 ring-gray-500/50'
-            }`}
-          >
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${
+              className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                 raceStatus === 'En cours' ? 'bg-emerald-400 animate-pulse' : raceStatus === 'Terminée' ? 'bg-red-400' : 'bg-gray-400'
               }`}
             />

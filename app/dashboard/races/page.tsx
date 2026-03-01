@@ -295,17 +295,9 @@ export default function RacesPage() {
                     <td className="p-4">{race.time}</td>
                     <td className="p-4">{race.distance}m</td>
                     <td className="p-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium animate-in ${
-                          race.status === 'En cours'
-                            ? 'bg-emerald-500/25 text-emerald-400 ring-1 ring-emerald-500/50'
-                            : race.status === 'Terminée'
-                              ? 'bg-red-500/25 text-red-400 ring-1 ring-red-500/50'
-                              : 'bg-gray-500/25 text-gray-400 ring-1 ring-gray-500/50'
-                        }`}
-                      >
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300">
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${
+                          className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                             race.status === 'En cours'
                               ? 'bg-emerald-400 animate-pulse'
                               : race.status === 'Terminée'
