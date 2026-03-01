@@ -16,6 +16,9 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+// Required when behind a reverse proxy (e.g. Render): trust X-Forwarded-For so rate-limit sees real IP
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(
   cors({
