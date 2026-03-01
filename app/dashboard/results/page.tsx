@@ -9,6 +9,7 @@ interface ResultRow {
   race_id: string;
   title?: string;
   arrival?: number[];
+  weather?: number | null;
   _id?: string;
 }
 
@@ -279,6 +280,7 @@ export default function ResultsPage() {
                   <th className="p-4">Race ID</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Arrival</th>
+                  <th className="p-4">Weather</th>
                   <th className="p-4">Actions</th>
                 </tr>
               </thead>
@@ -298,6 +300,11 @@ export default function ResultsPage() {
                     <td className="p-4">
                       {Array.isArray(r.arrival) && r.arrival.length > 0
                         ? r.arrival.map((n) => Number(n)).join(' → ')
+                        : '—'}
+                    </td>
+                    <td className="p-4 text-sm">
+                      {r.weather != null && Number.isFinite(r.weather)
+                        ? `${Number(r.weather)} °C`
                         : '—'}
                     </td>
                     <td className="p-4 flex gap-2">
