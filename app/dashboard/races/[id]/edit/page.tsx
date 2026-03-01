@@ -45,7 +45,7 @@ export default function EditRacePage() {
             time: d.time,
             distance: d.distance,
             title: d.title,
-            purse: d.purse ?? 0,
+            purse: d.purse != null && d.purse > 100000 ? Math.round(d.purse / 100) : (d.purse ?? 0),
             pursecurrency: d.pursecurrency ?? 'Dh',
             weather_temp: d.weather_temp,
           });
@@ -229,27 +229,36 @@ export default function EditRacePage() {
           </div>
           <div className="space-y-3">
             {participants.map((p, i) => (
-              <div key={i} className="flex gap-2 items-center flex-wrap bg-dark-700 rounded-lg p-3">
-                <span className="text-gray-500 w-6">{p.number}</span>
-                <input
-                  placeholder="Horse"
-                  value={p.horse}
-                  onChange={(e) => updateParticipant(i, 'horse', e.target.value)}
-                  className="flex-1 min-w-[100px] px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
-                />
-                <input
-                  placeholder="Jockey"
-                  value={p.jockey}
-                  onChange={(e) => updateParticipant(i, 'jockey', e.target.value)}
-                  className="flex-1 min-w-[100px] px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
-                />
-                <input
-                  type="number"
-                  placeholder="Weight"
-                  value={p.weight || ''}
-                  onChange={(e) => updateParticipant(i, 'weight', +e.target.value || 0)}
-                  className="w-20 px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
-                />
+              <div key={i} className="flex flex-wrap gap-3 items-end bg-dark-700 rounded-lg p-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-0.5">Number</label>
+                  <span className="inline-block px-2 py-1.5 rounded bg-dark-600 text-white text-sm w-10 text-center">{p.number}</span>
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <label className="block text-xs text-gray-400 mb-0.5">Horse</label>
+                  <input
+                    value={p.horse}
+                    onChange={(e) => updateParticipant(i, 'horse', e.target.value)}
+                    className="w-full px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <label className="block text-xs text-gray-400 mb-0.5">Jockey</label>
+                  <input
+                    value={p.jockey}
+                    onChange={(e) => updateParticipant(i, 'jockey', e.target.value)}
+                    className="w-full px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                  />
+                </div>
+                <div className="w-20">
+                  <label className="block text-xs text-gray-400 mb-0.5">Weight</label>
+                  <input
+                    type="number"
+                    value={p.weight || ''}
+                    onChange={(e) => updateParticipant(i, 'weight', +e.target.value || 0)}
+                    className="w-full px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => removeParticipant(i)}

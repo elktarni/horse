@@ -288,7 +288,7 @@ export default function RacesPage() {
                     <td className="p-4 max-w-[200px] truncate">{race.title}</td>
                     <td className="p-4 text-sm">
                       {race.purse != null && race.purse > 0
-                        ? `${Number(race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
+                        ? `${Number(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
                         : '—'}
                     </td>
                     <td className="p-4 text-sm">

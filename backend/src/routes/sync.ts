@@ -248,12 +248,38 @@ export async function runCasaProgrammeSync(options: {
         const details = await fetchCasaRaceDetails(race.id);
         if (details && (details.purse != null || details.weather_temp != null || details.participants?.length)) {
           const update: Record<string, unknown> = {};
-          if (details.purse != null) update.purse = details.purse;
+          if (details.purse != null) update.purse = Math.round(details.purse / 100);
           if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
           if (details.weather_temp != null) update.weather_temp = details.weather_temp;
           if (details.participants?.length) update.participants = details.participants;
           if (Object.keys(update).length) await Race.findByIdAndUpdate(_id, { $set: update });
         }
+      }
+    }
+  }
+
+  // Enrich ALL Morocco races with purse/participants/weather (not only finished ones)
+  for (const meeting of meetings) {
+    const apiTrack = meeting.track?.trim() || '';
+    if (!apiTrack) continue;
+    const track = getCanonicalTrack(apiTrack);
+    for (const race of meeting.races || []) {
+      const raceNumber = raceNumberFromCode(race.code);
+      if (raceNumber <= 0) continue;
+      const ourRace = await Race.findOne({
+        date: { $gte: dateStart, $lte: dateEnd },
+        hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        race_number: raceNumber,
+      });
+      if (!ourRace) continue;
+      const details = await fetchCasaRaceDetails(race.id);
+      if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
+        const update: Record<string, unknown> = {};
+        if (details.purse != null) update.purse = Math.round(details.purse / 100);
+        if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+        if (details.weather_temp != null) update.weather_temp = details.weather_temp;
+        if (details.participants && details.participants.length) update.participants = details.participants;
+        if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
     }
   }
@@ -289,7 +315,7 @@ export async function runCasaProgrammeSync(options: {
       const details = await fetchCasaRaceDetails(race.id);
       if (details && (details.purse != null || details.weather_temp != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
-        if (details.purse != null) update.purse = details.purse;
+        if (details.purse != null) update.purse = Math.round(details.purse / 100);
         if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
         if (details.weather_temp != null) update.weather_temp = details.weather_temp;
         if (details.participants && details.participants.length) update.participants = details.participants;
