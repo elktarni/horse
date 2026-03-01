@@ -34,7 +34,7 @@ router.get(
         filter.date = { $gte: dateStart, $lte: dateEnd };
       }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
-      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r) }));
+      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r), weather: r.weather_temp ?? null }));
       apiResponse(res, true, withStatus, 'Races retrieved');
     } catch (err) {
       console.error('GET public races error:', err);
@@ -59,7 +59,7 @@ router.get(
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, { ...race, status: getRaceStatus(race) }, 'Race retrieved');
+      apiResponse(res, true, { ...race, status: getRaceStatus(race), weather: race.weather_temp ?? null }, 'Race retrieved');
     } catch (err) {
       console.error('GET public race error:', err);
       apiResponse(res, false, null, 'Server error', 500);

@@ -35,7 +35,7 @@ router.get(
         filter.date = { $gte: dateStart, $lte: dateEnd };
       }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
-      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r) }));
+      const withStatus = races.map((r) => ({ ...r, status: getRaceStatus(r), weather: r.weather_temp ?? null }));
       apiResponse(res, true, withStatus, 'Races retrieved');
     } catch (err) {
       console.error('GET races error:', err);
@@ -59,7 +59,7 @@ router.get(
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, { ...race, status: getRaceStatus(race) }, 'Race retrieved');
+      apiResponse(res, true, { ...race, status: getRaceStatus(race), weather: race.weather_temp ?? null }, 'Race retrieved');
     } catch (err) {
       console.error('GET race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -113,7 +113,7 @@ router.post(
         participants: participants || [],
       });
       const raceObj = created.toObject();
-      apiResponse(res, true, { ...raceObj, status: getRaceStatus(raceObj) }, 'Race created', 201);
+      apiResponse(res, true, { ...raceObj, status: getRaceStatus(raceObj), weather: raceObj.weather_temp ?? null }, 'Race created', 201);
     } catch (err) {
       console.error('POST race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
@@ -152,7 +152,7 @@ router.put(
         apiResponse(res, false, null, 'Race not found', 404);
         return;
       }
-      apiResponse(res, true, { ...race, status: getRaceStatus(race) }, 'Race updated');
+      apiResponse(res, true, { ...race, status: getRaceStatus(race), weather: race.weather_temp ?? null }, 'Race updated');
     } catch (err) {
       console.error('PUT race error:', err);
       apiResponse(res, false, null, 'Server error', 500);
