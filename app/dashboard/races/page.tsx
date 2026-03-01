@@ -180,17 +180,17 @@ export default function RacesPage() {
         <span className="text-sm text-gray-500">View:</span>
         <button
           type="button"
-          onClick={() => setViewDate('today')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'today' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
-        >
-          Today
-        </button>
-        <button
-          type="button"
           onClick={() => setViewDate('yesterday')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'yesterday' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
         >
           Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewDate('today')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'today' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          Today
         </button>
         <button
           type="button"
