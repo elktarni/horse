@@ -87,6 +87,7 @@ export default function RacesPage() {
                   <th className="p-4">Distance</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Purse</th>
+                  <th className="p-4">Participants</th>
                   <th className="p-4">Weather</th>
                   <th className="p-4">Actions</th>
                 </tr>
@@ -105,6 +106,9 @@ export default function RacesPage() {
                       {race.purse != null && race.purse > 0
                         ? `${Number(race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
                         : '—'}
+                    </td>
+                    <td className="p-4 text-sm">
+                      {race.participants?.length ? race.participants.length : '—'}
                     </td>
                     <td className="p-4 text-sm">
                       {weather[race.hippodrome] === undefined
