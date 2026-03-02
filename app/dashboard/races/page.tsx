@@ -148,17 +148,19 @@ export default function RacesPage() {
     }
     if (Object.keys(payload).length === 0) return cancelEditing();
 
+    const raceId = String(editingCell.raceId);
     try {
-      const res = await api.put<Race>(`/api/v1/races/${editingCell.raceId}`, payload);
+      const res = await api.put<Race>(`/api/v1/races/${raceId}`, payload);
       if (res.success && res.data) {
-        setRaces((prev) => prev.map((r) => (r._id === editingCell.raceId ? { ...r, ...res.data } : r)));
+        setRaces((prev) => prev.map((r) => (String(r._id) === raceId ? { ...r, ...res.data } : r)));
         toast.success('Saved');
+        fetchRaces();
       }
     } catch {
       toast.error('Failed to save');
     }
     cancelEditing();
-  }, [editingCell, editingValue, races, cancelEditing]);
+  }, [editingCell, editingValue, races, cancelEditing, fetchRaces]);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);

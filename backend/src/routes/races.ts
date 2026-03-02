@@ -130,6 +130,8 @@ router.post(
   }
 );
 
+const RACE_UPDATE_FIELDS = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'purse', 'pursecurrency', 'weather_temp', 'participants'] as const;
+
 router.put(
   '/:id',
   [
@@ -152,11 +154,24 @@ router.put(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const race = await Race.findByIdAndUpdate(
-        req.params.id,
-        { $set: req.body },
-        { new: true, runValidators: true }
-      ).lean();
+      const id = String(req.params.id).trim();
+      const body = req.body as Record<string, unknown>;
+      const update: Record<string, unknown> = {};
+      for (const key of RACE_UPDATE_FIELDS) {
+        if (body[key] !== undefined && body[key] !== null) {
+          if (key === 'date') update[key] = new Date(body[key] as string);
+          else if (key === 'race_number' || key === 'distance') update[key] = Number(body[key]);
+          else if (key === 'purse') update[key] = Number(body[key]);
+          else if (key === 'weather_temp') update[key] = Number(body[key]);
+          else if (key === 'participants') update[key] = body[key];
+          else update[key] = typeof body[key] === 'string' ? String(body[key]).trim() : body[key];
+        }
+      }
+      if (Object.keys(update).length === 0) {
+        apiResponse(res, false, null, 'No valid fields to update', 400);
+        return;
+      }
+      const race = await Race.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true }).lean();
       if (!race) {
         apiResponse(res, false, null, 'Race not found', 404);
         return;
