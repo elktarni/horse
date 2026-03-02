@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 
+const PING_URL = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api/v1/ping`
+  : '';
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     racesToday: 0,
@@ -11,6 +15,8 @@ export default function DashboardPage() {
     totalRaces: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const [lastPingAt, setLastPingAt] = useState<string | null>(null);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -24,6 +30,17 @@ export default function DashboardPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    api.get<{ pong: boolean }>('/api/v1/ping')
+      .then((r) => {
+        if (r.success) {
+          setApiReachable(true);
+          setLastPingAt(new Date().toISOString());
+        } else setApiReachable(false);
+      })
+      .catch(() => setApiReachable(false));
   }, []);
 
   if (loading) {
@@ -61,6 +78,34 @@ export default function DashboardPage() {
           <li>• Results added: <span className="text-white">{stats.totalResults}</span></li>
           <li>• Add a new race or result from the sidebar.</li>
         </ul>
+      </div>
+
+      <div className="bg-dark-800 rounded-xl border border-dark-600 p-6 mt-6">
+        <h2 className="text-lg font-semibold text-white mb-2">Keep Render awake</h2>
+        <p className="text-gray-400 text-sm mb-3">
+          On Render free tier, the instance spins down after inactivity. Call the ping URL every 10 minutes to avoid cold starts (50+ s delay).
+        </p>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm text-gray-500">API status:</span>
+          {apiReachable === null ? (
+            <span className="text-gray-400 text-sm">Checking…</span>
+          ) : apiReachable ? (
+            <span className="text-emerald-400 text-sm font-medium">Reachable</span>
+          ) : (
+            <span className="text-amber-400 text-sm">Unreachable</span>
+          )}
+          {lastPingAt && (
+            <span className="text-xs text-gray-500">(last check: {new Date(lastPingAt).toLocaleTimeString()})</span>
+          )}
+        </div>
+        {PING_URL ? (
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500">Ping this URL every 10 min (e.g. <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">cron-job.org</a>):</p>
+            <code className="block bg-dark-700 rounded px-2 py-1.5 text-xs text-gray-300 break-all">{PING_URL}</code>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">Set <code className="bg-dark-700 px-1 rounded">NEXT_PUBLIC_API_URL</code> to your Render API URL to see the ping link here.</p>
+        )}
       </div>
     </div>
   );

@@ -44,6 +44,11 @@ app.get('/api/v1/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok' }, message: 'API healthy' });
 });
 
+// Lightweight keep-alive ping for Render (call every 10 min to prevent spin-down). No auth, minimal response.
+app.get('/api/v1/ping', (_req, res) => {
+  res.json({ success: true, data: { pong: true }, message: 'OK' });
+});
+
 app.use('/api/v1/auth', authRoutes);
 // Welcome route (no API key): GET /api/v1/public or /api/v1/public/
 app.get(['/api/v1/public', '/api/v1/public/'], (_req, res) => {
