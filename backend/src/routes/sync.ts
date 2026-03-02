@@ -273,8 +273,11 @@ export async function runCasaProgrammeSync(options: {
       const details = await fetchCasaRaceDetails(race.id, date);
       if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
-        if (details.purse != null) update.purse = Math.round(details.purse / 100);
-        if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+        const existingPurse = ourRace.purse;
+        if (details.purse != null && (existingPurse == null || existingPurse === 0)) {
+          update.purse = Math.round(details.purse / 100);
+          if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+        }
         if (details.participants && details.participants.length) update.participants = details.participants;
         if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
@@ -308,12 +311,15 @@ export async function runCasaProgrammeSync(options: {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich race with purse, participants from Casa only; do not sync weather (use Open-Meteo elsewhere)
+      // Enrich race with purse, participants from Casa only; do not overwrite purse if user already set it (manual edit)
       const details = await fetchCasaRaceDetails(race.id, date);
       if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
         const update: Record<string, unknown> = {};
-        if (details.purse != null) update.purse = Math.round(details.purse / 100);
-        if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+        const existingPurse = ourRace.purse;
+        if (details.purse != null && (existingPurse == null || existingPurse === 0)) {
+          update.purse = Math.round(details.purse / 100);
+          if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
+        }
         if (details.participants && details.participants.length) update.participants = details.participants;
         if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
