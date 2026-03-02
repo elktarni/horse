@@ -268,18 +268,12 @@ export async function runCasaProgrammeSync(options: {
         date: { $gte: dateStart, $lte: dateEnd },
         hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
         race_number: raceNumber,
-      });
+      }).lean();
       if (!ourRace) continue;
       const details = await fetchCasaRaceDetails(race.id, date);
-      if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
-        const update: Record<string, unknown> = {};
-        const existingPurse = ourRace.purse;
-        if (details.purse != null && (existingPurse == null || existingPurse === 0)) {
-          update.purse = Math.round(details.purse / 100);
-          if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
-        }
-        if (details.participants && details.participants.length) update.participants = details.participants;
-        if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
+      if (details && (details.participants && details.participants.length > 0)) {
+        const update: Record<string, unknown> = { participants: details.participants };
+        await Race.findByIdAndUpdate(ourRace._id, { $set: update });
       }
     }
   }
@@ -306,22 +300,15 @@ export async function runCasaProgrammeSync(options: {
         date: { $gte: dateStart, $lte: dateEnd },
         hippodrome: new RegExp(`^${track.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
         race_number: raceNumber,
-      });
+      }).lean();
       if (!ourRace) {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich race with purse, participants from Casa only; do not overwrite purse if user already set it (manual edit)
+      // Enrich participants only; never overwrite purse for existing races (user may have edited it)
       const details = await fetchCasaRaceDetails(race.id, date);
-      if (details && (details.purse != null || (details.participants && details.participants.length > 0))) {
-        const update: Record<string, unknown> = {};
-        const existingPurse = ourRace.purse;
-        if (details.purse != null && (existingPurse == null || existingPurse === 0)) {
-          update.purse = Math.round(details.purse / 100);
-          if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
-        }
-        if (details.participants && details.participants.length) update.participants = details.participants;
-        if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
+      if (details && details.participants && details.participants.length > 0) {
+        await Race.findByIdAndUpdate(ourRace._id, { $set: { participants: details.participants } });
       }
       const existing = await Result.findOne({ race_id: ourRace._id });
       if (existing) {
