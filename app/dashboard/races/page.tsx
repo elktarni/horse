@@ -344,6 +344,7 @@ export default function RacesPage() {
                   <th className="p-4">Date</th>
                   <th className="p-4">Hippodrome</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4">Reunion</th>
                   <th className="p-4">Race #</th>
                   <th className="p-4">Time</th>
                   <th className="p-4">Distance</th>
@@ -382,6 +383,7 @@ export default function RacesPage() {
                         {race.status ?? '—'}
                       </span>
                     </td>
+                    <td className="p-4 text-sm">{race.reunion ?? '—'}</td>
                     <td className="p-4">{race.race_number}</td>
                     <td
                       className="p-4 cursor-text"

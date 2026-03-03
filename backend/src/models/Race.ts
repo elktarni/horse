@@ -18,6 +18,8 @@ export interface IRace extends Omit<Document, '_id'> {
   purse?: number;
   pursecurrency?: string;
   weather_temp?: number;
+  /** Reunion code from Casa API (e.g. "R9" for Marrakech) */
+  reunion?: string;
   participants: IParticipant[];
 }
 
@@ -43,6 +45,7 @@ const RaceSchema = new Schema<IRace>(
     purse: { type: Number, default: 0 },
     pursecurrency: { type: String, default: 'Dh' },
     weather_temp: { type: Number },
+    reunion: { type: String },
     participants: [ParticipantSchema],
   },
   { timestamps: true }

@@ -126,6 +126,8 @@ interface CasaMeeting {
   id?: string;
   track: string;
   country?: string;
+  reunion_code?: string;
+  label?: string;
   races: CasaRace[];
 }
 
@@ -231,6 +233,7 @@ export async function runCasaProgrammeSync(options: {
         if (await Race.findById(_id)) continue;
         const time = (race.time_hm && String(race.time_hm).trim()) || '00:00';
         const purseCurrency = (race.pursecurrency && String(race.pursecurrency).trim()) || 'Dh';
+        const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
         await Race.create({
           _id,
           date: dateStart,
@@ -241,6 +244,7 @@ export async function runCasaProgrammeSync(options: {
           title: (race.name && String(race.name).trim()) || `Race ${raceNumber}`,
           purse: 0,
           pursecurrency: purseCurrency,
+          reunion,
           participants: [],
         });
         racesAdded.push(_id);
@@ -271,10 +275,12 @@ export async function runCasaProgrammeSync(options: {
       }).lean();
       if (!ourRace) continue;
       const details = await fetchCasaRaceDetails(race.id, date);
+      const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
+      const update: Record<string, unknown> = reunion ? { reunion } : {};
       if (details && (details.participants && details.participants.length > 0)) {
-        const update: Record<string, unknown> = { participants: details.participants };
-        await Race.findByIdAndUpdate(ourRace._id, { $set: update });
+        update.participants = details.participants;
       }
+      if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
     }
   }
 
@@ -305,11 +311,14 @@ export async function runCasaProgrammeSync(options: {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich participants only; never overwrite purse for existing races (user may have edited it)
+      // Enrich participants and reunion; never overwrite purse for existing races (user may have edited it)
       const details = await fetchCasaRaceDetails(race.id, date);
+      const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
+      const raceUpdate: Record<string, unknown> = reunion ? { reunion } : {};
       if (details && details.participants && details.participants.length > 0) {
-        await Race.findByIdAndUpdate(ourRace._id, { $set: { participants: details.participants } });
+        raceUpdate.participants = details.participants;
       }
+      if (Object.keys(raceUpdate).length) await Race.findByIdAndUpdate(ourRace._id, { $set: raceUpdate });
       const existing = await Result.findOne({ race_id: ourRace._id });
       if (existing) {
         await Result.updateOne({ race_id: ourRace._id }, { $set: { arrival } });

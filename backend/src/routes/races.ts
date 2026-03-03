@@ -88,6 +88,7 @@ router.post(
     body('purse').optional().isFloat({ min: 0 }),
     body('pursecurrency').optional().isString().trim(),
     body('weather_temp').optional().isFloat(),
+    body('reunion').optional().isString().trim(),
     ...participantValidator,
   ],
   async (req: Request, res: Response): Promise<void> => {
@@ -97,7 +98,7 @@ router.post(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, weather_temp, participants } = req.body;
+      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, weather_temp, reunion, participants } = req.body;
       const d = new Date(date);
       const dateStr = d.toISOString().slice(0, 10);
       const _id = `${dateStr}-${race_number}`;
@@ -119,6 +120,7 @@ router.post(
         purse: purse != null ? Number(purse) : 0,
         pursecurrency: pursecurrency && String(pursecurrency).trim() ? String(pursecurrency).trim() : 'Dh',
         weather_temp: weather_temp != null ? Number(weather_temp) : undefined,
+        reunion: reunion && String(reunion).trim() ? String(reunion).trim() : undefined,
         participants: participants || [],
       });
       const raceObj = created.toObject();
@@ -130,7 +132,7 @@ router.post(
   }
 );
 
-const RACE_UPDATE_FIELDS = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'purse', 'pursecurrency', 'weather_temp', 'participants'] as const;
+const RACE_UPDATE_FIELDS = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'purse', 'pursecurrency', 'weather_temp', 'reunion', 'participants'] as const;
 
 router.put(
   '/:id',
@@ -145,6 +147,7 @@ router.put(
     body('purse').optional().isFloat({ min: 0 }),
     body('pursecurrency').optional().isString().trim(),
     body('weather_temp').optional().isFloat(),
+    body('reunion').optional().isString().trim(),
     body('participants').optional().isArray(),
   ],
   async (req: Request, res: Response): Promise<void> => {

@@ -74,6 +74,8 @@ export interface Race {
   weather_temp?: number;
   /** Weather temp from race (same source for races and results APIs) */
   weather?: number | null;
+  /** Reunion code from Casa API (e.g. "R9" for Marrakech) - for mobile integration */
+  reunion?: string;
   participants: { number: number; horse: string; jockey: string; weight: number }[];
   status?: RaceStatus;
 }
