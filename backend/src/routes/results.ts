@@ -23,7 +23,7 @@ router.get(
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome' } },
+        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome', time: '$race.time' } },
       ];
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');
@@ -32,13 +32,7 @@ router.get(
       }
       pipeline.push({ $project: { race: 0 } });
       const results = await Result.aggregate(pipeline as never[]);
-      const hippodromes = [...new Set((results as { hippodrome?: string }[]).map((r) => r.hippodrome).filter(Boolean))] as string[];
-      const weatherMap = hippodromes.length ? await getWeatherForLocations(hippodromes) : {};
-      const withWeather = (results as { hippodrome?: string }[]).map((r) => ({
-        ...r,
-        weather: r.hippodrome && weatherMap[r.hippodrome] ? weatherMap[r.hippodrome]!.temp : null,
-      }));
-      apiResponse(res, true, withWeather, 'Results list retrieved');
+      apiResponse(res, true, results, 'Results list retrieved');
     } catch (err) {
       console.error('GET results error:', err);
       apiResponse(res, false, null, 'Server error', 500);
