@@ -29,6 +29,7 @@ export default function EditRacePage() {
     purse: 0,
     pursecurrency: 'Dh',
     weather_temp: undefined as number | undefined,
+    reunion: '',
   });
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [raceStatus, setRaceStatus] = useState<RaceStatus | undefined>();
@@ -49,6 +50,7 @@ export default function EditRacePage() {
             purse: d.purse != null && d.purse > 100000 ? Math.round(d.purse / 100) : (d.purse ?? 0),
             pursecurrency: d.pursecurrency ?? 'Dh',
             weather_temp: d.weather_temp,
+            reunion: d.reunion ?? '',
           });
           setParticipants(d.participants || []);
           setRaceStatus(d.status);
@@ -154,14 +156,25 @@ export default function EditRacePage() {
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Hippodrome</label>
-          <input
-            required
-            value={form.hippodrome}
-            onChange={(e) => setForm((f) => ({ ...f, hippodrome: e.target.value }))}
-            className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Hippodrome</label>
+            <input
+              required
+              value={form.hippodrome}
+              onChange={(e) => setForm((f) => ({ ...f, hippodrome: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Reunion (Casa)</label>
+            <input
+              value={form.reunion}
+              onChange={(e) => setForm((f) => ({ ...f, reunion: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
+              placeholder="e.g. R9"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

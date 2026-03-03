@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-type EditableField = 'time' | 'distance' | 'title' | 'purse';
+type EditableField = 'time' | 'distance' | 'title' | 'purse' | 'reunion';
 
 type WeatherMap = Record<string, { temp: number; unit: string } | null>;
 
@@ -103,6 +103,8 @@ export default function RacesPage() {
         return race.purse != null && race.purse > 0
           ? String(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse)
           : '';
+      case 'reunion':
+        return race.reunion ?? '';
       default:
         return '';
     }
@@ -145,6 +147,8 @@ export default function RacesPage() {
       if (Number.isNaN(n) || n < 0) return cancelEditing();
       payload.purse = n;
       payload.pursecurrency = race.pursecurrency ?? 'Dh';
+    } else if (editingCell.field === 'reunion') {
+      payload.reunion = editingValue.trim() || undefined;
     }
     if (Object.keys(payload).length === 0) return cancelEditing();
 
@@ -383,7 +387,27 @@ export default function RacesPage() {
                         {race.status ?? '—'}
                       </span>
                     </td>
-                    <td className="p-4 text-sm">{race.reunion ?? '—'}</td>
+                    <td
+                      className="p-4 text-sm cursor-text"
+                      onDoubleClick={() => startEditing(race, 'reunion')}
+                      title="Double-click to edit"
+                    >
+                      {editingCell?.raceId === race._id && editingCell?.field === 'reunion' ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-16 rounded border border-dark-500 bg-dark-700 px-2 py-1 text-sm text-white focus:border-accent focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="R9"
+                        />
+                      ) : (
+                        race.reunion ?? '—'
+                      )}
+                    </td>
                     <td className="p-4">{race.race_number}</td>
                     <td
                       className="p-4 cursor-text"
