@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+const VENUE_STORAGE_KEY = 'dashboard-venue';
 const requiredFields = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'participants'];
 
 function validateRaceJson(obj: unknown): string | null {
@@ -33,20 +34,27 @@ function isEventFormat(obj: unknown): obj is { event_date: string; hippodrome: s
   return typeof o.event_date === 'string' && typeof o.hippodrome === 'string' && Array.isArray(o.races);
 }
 
-async function submitData(data: unknown): Promise<{ message: string }> {
+async function submitData(data: unknown, venue: 'SOREC' | 'PMU'): Promise<{ message: string }> {
   if (isEventFormat(data)) {
-    const res = await api.post<{ created: string[]; skipped: string[] }>('/api/v1/upload/event-json', { data });
+    const res = await api.post<{ created: string[]; skipped: string[] }>('/api/v1/upload/event-json', { data, venue });
     if (!res.success) throw new Error(res.message);
     return { message: res.message };
   }
   const err = validateRaceJson(data);
   if (err) throw new Error(err);
-  const res = await api.post('/api/v1/upload/race-json', { data });
+  const res = await api.post('/api/v1/upload/race-json', { data, venue });
   if (!res.success) throw new Error(res.message);
   return { message: 'Race imported successfully' };
 }
 
 export default function UploadPage() {
+  const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem(VENUE_STORAGE_KEY);
+      return v === 'PMU' ? 'PMU' : 'SOREC';
+    }
+    return 'SOREC';
+  });
   const [pasteText, setPasteText] = useState('');
   const [loading, setLoading] = useState(false);
   const [drag, setDrag] = useState(false);
@@ -62,7 +70,7 @@ export default function UploadPage() {
     }
     setLoading(true);
     try {
-      const { message } = await submitData(data);
+      const { message } = await submitData(data, venue);
       toast.success(message);
       setPasteText('');
       if (inputRef.current) inputRef.current.value = '';
@@ -103,6 +111,25 @@ export default function UploadPage() {
         <h1 className="text-2xl font-bold text-white">Upload JSON</h1>
       </div>
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-2">Data type (SOREC or PMU)</label>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600 w-fit">
+            <button
+              type="button"
+              onClick={() => { setVenue('SOREC'); localStorage.setItem(VENUE_STORAGE_KEY, 'SOREC'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVenue('PMU'); localStorage.setItem(VENUE_STORAGE_KEY, 'PMU'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
+          </div>
+        </div>
         <p className="text-gray-400 text-sm">
           Paste JSON below or upload a file. Supports:
         </p>

@@ -30,6 +30,7 @@ export default function EditRacePage() {
     pursecurrency: 'Dh',
     weather_temp: undefined as number | undefined,
     reunion: '',
+    venue: 'SOREC' as 'SOREC' | 'PMU',
   });
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [raceStatus, setRaceStatus] = useState<RaceStatus | undefined>();
@@ -51,6 +52,7 @@ export default function EditRacePage() {
             pursecurrency: d.pursecurrency ?? 'Dh',
             weather_temp: d.weather_temp,
             reunion: d.reunion ?? '',
+            venue: d.venue === 'PMU' ? 'PMU' : 'SOREC',
           });
           setParticipants(d.participants || []);
           setRaceStatus(d.status);
@@ -154,6 +156,25 @@ export default function EditRacePage() {
               onChange={(e) => setForm((f) => ({ ...f, race_number: +e.target.value }))}
               className="w-full px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white"
             />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Course type</label>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600 w-fit">
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, venue: 'SOREC' }))}
+              className={`px-4 py-2 text-sm font-medium transition ${form.venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, venue: 'PMU' }))}
+              className={`px-4 py-2 text-sm font-medium transition ${form.venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+const VENUE_STORAGE_KEY = 'dashboard-venue';
+
 interface Participant {
   number: number;
   horse: string;
@@ -15,6 +17,13 @@ interface Participant {
 
 export default function NewRacePage() {
   const router = useRouter();
+  const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem(VENUE_STORAGE_KEY);
+      return v === 'PMU' ? 'PMU' : 'SOREC';
+    }
+    return 'SOREC';
+  });
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -77,7 +86,7 @@ export default function NewRacePage() {
     }
     setLoading(true);
     try {
-      const res = await api.post('/api/v1/races', { ...form, participants });
+      const res = await api.post('/api/v1/races', { ...form, venue, participants });
       if (res.success) {
         toast.success('Race created');
         router.push('/dashboard/races');
@@ -98,6 +107,25 @@ export default function NewRacePage() {
         <h1 className="text-2xl font-bold text-white">Add Race</h1>
       </div>
       <form onSubmit={handleSubmit} className="bg-dark-800 rounded-xl border border-dark-600 p-6 space-y-6">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Course type</label>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600 w-fit">
+            <button
+              type="button"
+              onClick={() => { setVenue('SOREC'); localStorage.setItem(VENUE_STORAGE_KEY, 'SOREC'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVenue('PMU'); localStorage.setItem(VENUE_STORAGE_KEY, 'PMU'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Date</label>

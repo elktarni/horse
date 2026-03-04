@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+const VENUE_STORAGE_KEY = 'dashboard-venue';
+
 interface ResultRow {
   race_id: string;
   title?: string;
@@ -24,11 +26,17 @@ interface CasaSyncResponse {
 }
 
 export default function ResultsPage() {
+  const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem(VENUE_STORAGE_KEY);
+      return v === 'PMU' ? 'PMU' : 'SOREC';
+    }
+    return 'SOREC';
+  });
   const [results, setResults] = useState<ResultRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [syncVenue, setSyncVenue] = useState('SOREC');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -41,7 +49,10 @@ export default function ResultsPage() {
 
   const fetchResults = useCallback(() => {
     setLoading(true);
-    const url = apiDate ? `/api/v1/results?date=${apiDate}` : '/api/v1/results';
+    const params = new URLSearchParams();
+    if (apiDate) params.set('date', apiDate);
+    params.set('venue', venue);
+    const url = `/api/v1/results?${params}`;
     api
       .get<ResultRow[]>(url)
       .then((r) => {
@@ -49,7 +60,7 @@ export default function ResultsPage() {
       })
       .catch(() => toast.error('Failed to load results'))
       .finally(() => setLoading(false));
-  }, [apiDate]);
+  }, [apiDate, venue]);
 
   useEffect(() => {
     fetchResults();
@@ -112,8 +123,7 @@ export default function ResultsPage() {
   const handleSyncFromCasa = async () => {
     setSyncLoading(true);
     try {
-      const params = new URLSearchParams({ date: syncDate });
-      if (syncVenue.trim()) params.set('venue', syncVenue.trim());
+      const params = new URLSearchParams({ date: syncDate, venue });
       const r = await api.get<CasaSyncResponse>(`/api/v1/sync/casa-programme?${params}`);
       if (!r.success || !r.data) throw new Error(r.message);
       const d = r.data;
@@ -123,7 +133,7 @@ export default function ResultsPage() {
         setViewDate('custom');
         setCustomDate(syncDate);
         setLoading(true);
-        api.get<ResultRow[]>(`/api/v1/results?date=${syncDate}`).then((r) => {
+        api.get<ResultRow[]>(`/api/v1/results?date=${syncDate}&venue=${venue}`).then((r) => {
           if (r.success && Array.isArray(r.data)) setResults(r.data);
         }).catch(() => toast.error('Failed to refresh list')).finally(() => setLoading(false));
       } else if (d.notFound?.length) {
@@ -155,8 +165,26 @@ export default function ResultsPage() {
 
   return (
     <div className="animate-in">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-white">Results</h1>
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white">Results</h1>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600">
+            <button
+              type="button"
+              onClick={() => { setVenue('SOREC'); localStorage.setItem(VENUE_STORAGE_KEY, 'SOREC'); }}
+              className={`px-3 py-1.5 text-sm font-medium transition ${venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVenue('PMU'); localStorage.setItem(VENUE_STORAGE_KEY, 'PMU'); }}
+              className={`px-3 py-1.5 text-sm font-medium transition ${venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <button
@@ -234,16 +262,6 @@ export default function ResultsPage() {
               value={syncDate}
               onChange={(e) => setSyncDate(e.target.value)}
               className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-400">
-            Venue
-            <input
-              type="text"
-              value={syncVenue}
-              onChange={(e) => setSyncVenue(e.target.value)}
-              placeholder="SOREC"
-              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm w-28"
             />
           </label>
           <button

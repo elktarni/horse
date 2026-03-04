@@ -19,7 +19,16 @@ interface CasaSyncResponse {
   message: string;
 }
 
+const VENUE_STORAGE_KEY = 'dashboard-venue';
+
 export default function RacesPage() {
+  const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem(VENUE_STORAGE_KEY);
+      return v === 'PMU' ? 'PMU' : 'SOREC';
+    }
+    return 'SOREC';
+  });
   const [races, setRaces] = useState<Race[]>([]);
   const [weather, setWeather] = useState<WeatherMap>({});
   const [loading, setLoading] = useState(true);
@@ -40,7 +49,10 @@ export default function RacesPage() {
 
   const fetchRaces = useCallback(() => {
     setLoading(true);
-    const url = apiDate ? `/api/v1/races?date=${apiDate}` : '/api/v1/races';
+    const params = new URLSearchParams();
+    if (apiDate) params.set('date', apiDate);
+    params.set('venue', venue);
+    const url = `/api/v1/races?${params}`;
     api
       .get<Race[]>(url)
       .then((r) => {
@@ -48,7 +60,7 @@ export default function RacesPage() {
       })
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
-  }, [apiDate]);
+  }, [apiDate, venue]);
 
   useEffect(() => {
     fetchRaces();
@@ -193,7 +205,7 @@ export default function RacesPage() {
     try {
       const params = new URLSearchParams({
         date: syncDate,
-        venue: 'SOREC',
+        venue,
         add_races: '1',
       });
       const r = await api.get<CasaSyncResponse>(`/api/v1/sync/casa-programme?${params}`);
@@ -205,7 +217,7 @@ export default function RacesPage() {
         setViewDate('custom');
         setCustomDate(syncDate);
         setLoading(true);
-        api.get<Race[]>(`/api/v1/races?date=${syncDate}`).then((r) => {
+        api.get<Race[]>(`/api/v1/races?date=${syncDate}&venue=${venue}`).then((r) => {
           if (r.success && Array.isArray(r.data)) setRaces(r.data);
         }).catch(() => toast.error('Failed to refresh list')).finally(() => setLoading(false));
       } else {
@@ -234,8 +246,26 @@ export default function RacesPage() {
 
   return (
     <div className="animate-in">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-white">Races</h1>
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white">Races</h1>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600">
+            <button
+              type="button"
+              onClick={() => { setVenue('SOREC'); localStorage.setItem(VENUE_STORAGE_KEY, 'SOREC'); }}
+              className={`px-3 py-1.5 text-sm font-medium transition ${venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVenue('PMU'); localStorage.setItem(VENUE_STORAGE_KEY, 'PMU'); }}
+              className={`px-3 py-1.5 text-sm font-medium transition ${venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <button
@@ -301,7 +331,7 @@ export default function RacesPage() {
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (SOREC Maroc)</h2>
+        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses ({venue === 'SOREC' ? 'SOREC Maroc' : 'PMU France'})</h2>
         <p className="text-sm text-gray-500 mb-3">
           Import races and results for <strong>Morocco only</strong> (e.g. Marrakech, Casablanca) from the Casa Courses API. Adds missing races and fills results for finished races. The list will refresh for the synced date.
         </p>

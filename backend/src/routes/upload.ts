@@ -15,7 +15,10 @@ function formatId(date: string, raceNumber: number): string {
 
 router.post(
   '/race-json',
-  [body('data').isObject().withMessage('JSON data required')],
+  [
+    body('data').isObject().withMessage('JSON data required'),
+    body('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -71,6 +74,7 @@ router.post(
         return;
       }
 
+      const venueVal = req.body.venue === 'PMU' ? 'PMU' : 'SOREC';
       const race = await Race.create({
         _id,
         date: new Date(date),
@@ -81,6 +85,7 @@ router.post(
         title,
         purse: purse != null ? Number(purse) : 0,
         pursecurrency: pursecurrency && String(pursecurrency).trim() ? String(pursecurrency).trim() : 'Dh',
+        venue: venueVal,
         participants: Array.isArray(participants) ? participants : [],
       });
       apiResponse(res, true, race, 'Race imported from JSON', 201);
@@ -100,7 +105,10 @@ function parseDistance(d: unknown): number {
 
 router.post(
   '/event-json',
-  [body('data').isObject().withMessage('JSON data required')],
+  [
+    body('data').isObject().withMessage('JSON data required'),
+    body('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -154,6 +162,7 @@ router.post(
           continue;
         }
 
+        const venueVal = req.body.venue === 'PMU' ? 'PMU' : 'SOREC';
         await Race.create({
           _id,
           date: new Date(eventDate),
@@ -162,6 +171,7 @@ router.post(
           time,
           distance,
           title,
+          venue: venueVal,
           participants,
         });
         created.push(_id);

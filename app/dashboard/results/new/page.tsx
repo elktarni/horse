@@ -6,8 +6,17 @@ import Link from 'next/link';
 import { api, type Race } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+const VENUE_STORAGE_KEY = 'dashboard-venue';
+
 export default function NewResultPage() {
   const router = useRouter();
+  const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem(VENUE_STORAGE_KEY);
+      return v === 'PMU' ? 'PMU' : 'SOREC';
+    }
+    return 'SOREC';
+  });
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -22,14 +31,14 @@ export default function NewResultPage() {
 
   useEffect(() => {
     api
-      .get<Race[]>(`/api/v1/races?date=${todayStr}`)
+      .get<Race[]>(`/api/v1/races?date=${todayStr}&venue=${venue}`)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setRaces(r.data);
         if (r.success && Array.isArray(r.data) && r.data.length) setRaceId(r.data[0]._id);
       })
       .catch(() => toast.error('Failed to load races'))
       .finally(() => setLoading(false));
-  }, [todayStr]);
+  }, [todayStr, venue]);
 
   const parseKeyValue = (s: string): Record<string, number> => {
     const out: Record<string, number> = {};
@@ -83,6 +92,25 @@ export default function NewResultPage() {
         <h1 className="text-2xl font-bold text-white">Add Result</h1>
       </div>
       <form onSubmit={handleSubmit} className="bg-dark-800 rounded-xl border border-dark-600 p-6 space-y-6">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Course type</label>
+          <div className="flex rounded-lg overflow-hidden border border-dark-600 w-fit">
+            <button
+              type="button"
+              onClick={() => { setVenue('SOREC'); localStorage.setItem(VENUE_STORAGE_KEY, 'SOREC'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'SOREC' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              SOREC
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVenue('PMU'); localStorage.setItem(VENUE_STORAGE_KEY, 'PMU'); }}
+              className={`px-4 py-2 text-sm font-medium transition ${venue === 'PMU' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+            >
+              PMU
+            </button>
+          </div>
+        </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1">Race (today&apos;s races only)</label>
           <select

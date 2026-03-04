@@ -19,7 +19,10 @@ const participantValidator = [
 
 router.get(
   '/',
-  [query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD')],
+  [
+    query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD'),
+    query('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -27,13 +30,19 @@ router.get(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const { date } = req.query;
+      const { date, venue } = req.query;
       const filter: Record<string, unknown> = {};
       if (date && typeof date === 'string') {
         const dateStr = String(date).trim();
         const dateStart = new Date(dateStr + 'T00:00:00.000Z');
         const dateEnd = new Date(dateStr + 'T23:59:59.999Z');
         filter.date = { $gte: dateStart, $lte: dateEnd };
+      }
+      if (venue && typeof venue === 'string') {
+        // Legacy races without venue default to SOREC
+        filter.$or = venue === 'SOREC'
+          ? [{ venue: 'SOREC' }, { venue: { $exists: false } }, { venue: null }]
+          : [{ venue: 'PMU' }];
       }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
       const hippodromes = [...new Set(races.map((r) => r.hippodrome).filter(Boolean))] as string[];
@@ -89,6 +98,7 @@ router.post(
     body('pursecurrency').optional().isString().trim(),
     body('weather_temp').optional().isFloat(),
     body('reunion').optional().isString().trim(),
+    body('venue').optional().isIn(['SOREC', 'PMU']),
     ...participantValidator,
   ],
   async (req: Request, res: Response): Promise<void> => {
@@ -98,7 +108,7 @@ router.post(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, weather_temp, reunion, participants } = req.body;
+      const { date, hippodrome, race_number, time, distance, title, purse, pursecurrency, weather_temp, reunion, venue, participants } = req.body;
       const d = new Date(date);
       const dateStr = d.toISOString().slice(0, 10);
       const _id = `${dateStr}-${race_number}`;
@@ -121,6 +131,7 @@ router.post(
         pursecurrency: pursecurrency && String(pursecurrency).trim() ? String(pursecurrency).trim() : 'Dh',
         weather_temp: weather_temp != null ? Number(weather_temp) : undefined,
         reunion: reunion && String(reunion).trim() ? String(reunion).trim() : undefined,
+        venue: venue === 'PMU' ? 'PMU' : 'SOREC',
         participants: participants || [],
       });
       const raceObj = created.toObject();
@@ -132,7 +143,7 @@ router.post(
   }
 );
 
-const RACE_UPDATE_FIELDS = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'purse', 'pursecurrency', 'weather_temp', 'reunion', 'participants'] as const;
+const RACE_UPDATE_FIELDS = ['date', 'hippodrome', 'race_number', 'time', 'distance', 'title', 'purse', 'pursecurrency', 'weather_temp', 'reunion', 'venue', 'participants'] as const;
 
 router.put(
   '/:id',
@@ -148,6 +159,7 @@ router.put(
     body('pursecurrency').optional().isString().trim(),
     body('weather_temp').optional().isFloat(),
     body('reunion').optional().isString().trim(),
+    body('venue').optional().isIn(['SOREC', 'PMU']),
     body('participants').optional().isArray(),
   ],
   async (req: Request, res: Response): Promise<void> => {
@@ -167,6 +179,7 @@ router.put(
           else if (key === 'purse') update[key] = Number(body[key]);
           else if (key === 'weather_temp') update[key] = Number(body[key]);
           else if (key === 'participants') update[key] = body[key];
+          else if (key === 'venue') update[key] = body[key] === 'PMU' ? 'PMU' : 'SOREC';
           else update[key] = typeof body[key] === 'string' ? String(body[key]).trim() : body[key];
         }
       }

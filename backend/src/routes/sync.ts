@@ -204,8 +204,11 @@ export async function runCasaProgrammeSync(options: {
   const data = (await response.json()) as CasaProgrammeResponse;
   const allMeetings = data.meetings || [];
   const meetingsFromApi = allMeetings.length;
-  const meetings = allMeetings.filter((m) => isMoroccoMeeting(m));
-  const meetingsMorocco = meetings.length;
+  // SOREC = Morocco only; PMU = all meetings (e.g. France)
+  const meetings = venue.toUpperCase() === 'PMU'
+    ? allMeetings
+    : allMeetings.filter((m) => isMoroccoMeeting(m));
+  const meetingsMorocco = venue.toUpperCase() === 'PMU' ? meetings.length : meetings.filter((m) => isMoroccoMeeting(m)).length;
   const dateStart = new Date(date + 'T00:00:00.000Z');
   const dateEnd = new Date(date + 'T23:59:59.999Z');
 
@@ -234,6 +237,7 @@ export async function runCasaProgrammeSync(options: {
         const time = (race.time_hm && String(race.time_hm).trim()) || '00:00';
         const purseCurrency = (race.pursecurrency && String(race.pursecurrency).trim()) || 'Dh';
         const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
+        const venueVal = (venue && String(venue).trim().toUpperCase()) === 'PMU' ? 'PMU' : 'SOREC';
         await Race.create({
           _id,
           date: dateStart,
@@ -245,6 +249,7 @@ export async function runCasaProgrammeSync(options: {
           purse: 0,
           pursecurrency: purseCurrency,
           reunion,
+          venue: venueVal,
           participants: [],
         });
         racesAdded.push(_id);
@@ -276,11 +281,12 @@ export async function runCasaProgrammeSync(options: {
       if (!ourRace) continue;
       const details = await fetchCasaRaceDetails(race.id, date);
       const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
-      const update: Record<string, unknown> = reunion ? { reunion } : {};
+      const venueVal = (venue && String(venue).trim().toUpperCase()) === 'PMU' ? 'PMU' : 'SOREC';
+      const update: Record<string, unknown> = { reunion: reunion ?? ourRace.reunion, venue: venueVal };
       if (details && (details.participants && details.participants.length > 0)) {
         update.participants = details.participants;
       }
-      if (Object.keys(update).length) await Race.findByIdAndUpdate(ourRace._id, { $set: update });
+      await Race.findByIdAndUpdate(ourRace._id, { $set: update });
     }
   }
 
@@ -311,14 +317,15 @@ export async function runCasaProgrammeSync(options: {
         notFound.push(`${track} C${raceNumber} (${race.name})`);
         continue;
       }
-      // Enrich participants and reunion; never overwrite purse for existing races (user may have edited it)
+      // Enrich participants, reunion, venue; never overwrite purse for existing races (user may have edited it)
       const details = await fetchCasaRaceDetails(race.id, date);
       const reunion = (meeting.reunion_code && String(meeting.reunion_code).trim()) || undefined;
-      const raceUpdate: Record<string, unknown> = reunion ? { reunion } : {};
+      const venueVal = (venue && String(venue).trim().toUpperCase()) === 'PMU' ? 'PMU' : 'SOREC';
+      const raceUpdate: Record<string, unknown> = { reunion: reunion ?? ourRace.reunion, venue: venueVal };
       if (details && details.participants && details.participants.length > 0) {
         raceUpdate.participants = details.participants;
       }
-      if (Object.keys(raceUpdate).length) await Race.findByIdAndUpdate(ourRace._id, { $set: raceUpdate });
+      await Race.findByIdAndUpdate(ourRace._id, { $set: raceUpdate });
       const existing = await Result.findOne({ race_id: ourRace._id });
       if (existing) {
         await Result.updateOne({ race_id: ourRace._id }, { $set: { arrival } });

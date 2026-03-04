@@ -11,7 +11,10 @@ router.use(authMiddleware);
 
 router.get(
   '/',
-  [query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD')],
+  [
+    query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD'),
+    query('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -20,16 +23,28 @@ router.get(
         return;
       }
       const date = req.query.date as string | undefined;
+      const venue = req.query.venue as string | undefined;
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
         { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome', time: '$race.time' } },
       ];
+      const matchStage: Record<string, unknown> = {};
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');
         const dateEnd = new Date(date + 'T23:59:59.999Z');
-        pipeline.push({ $match: { 'race.date': { $gte: dateStart, $lte: dateEnd } } });
+        matchStage['race.date'] = { $gte: dateStart, $lte: dateEnd };
       }
+      if (venue) {
+        matchStage.$or = venue === 'SOREC'
+          ? [
+              { 'race.venue': 'SOREC' },
+              { 'race.venue': { $exists: false } },
+              { 'race.venue': null },
+            ]
+          : [{ 'race.venue': 'PMU' }];
+      }
+      if (Object.keys(matchStage).length) pipeline.push({ $match: matchStage });
       pipeline.push({ $project: { race: 0 } });
       const results = await Result.aggregate(pipeline as never[]);
       apiResponse(res, true, results, 'Results list retrieved');

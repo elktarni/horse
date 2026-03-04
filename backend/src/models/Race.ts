@@ -20,6 +20,8 @@ export interface IRace extends Omit<Document, '_id'> {
   weather_temp?: number;
   /** Reunion code from Casa API (e.g. "R9" for Marrakech) */
   reunion?: string;
+  /** Course type: SOREC (Morocco) or PMU (France) */
+  venue?: 'SOREC' | 'PMU';
   participants: IParticipant[];
 }
 
@@ -46,6 +48,7 @@ const RaceSchema = new Schema<IRace>(
     pursecurrency: { type: String, default: 'Dh' },
     weather_temp: { type: Number },
     reunion: { type: String },
+    venue: { type: String, enum: ['SOREC', 'PMU'], default: 'SOREC' },
     participants: [ParticipantSchema],
   },
   { timestamps: true }

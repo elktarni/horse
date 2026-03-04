@@ -15,10 +15,13 @@ router.get('/health', (_req: Request, res: Response): void => {
   apiResponse(res, true, { status: 'ok' }, 'API healthy');
 });
 
-/** GET /api/v1/public/races?date=YYYY-MM-DD */
+/** GET /api/v1/public/races?date=YYYY-MM-DD&venue=SOREC|PMU */
 router.get(
   '/races',
-  [query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD')],
+  [
+    query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD'),
+    query('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -26,13 +29,18 @@ router.get(
         apiResponse(res, false, { errors: errors.array() }, 'Validation failed', 400);
         return;
       }
-      const { date } = req.query;
+      const { date, venue } = req.query;
       const filter: Record<string, unknown> = {};
       if (date && typeof date === 'string') {
         const dateStr = String(date).trim();
         const dateStart = new Date(dateStr + 'T00:00:00.000Z');
         const dateEnd = new Date(dateStr + 'T23:59:59.999Z');
         filter.date = { $gte: dateStart, $lte: dateEnd };
+      }
+      if (venue && typeof venue === 'string') {
+        filter.$or = venue === 'SOREC'
+          ? [{ venue: 'SOREC' }, { venue: { $exists: false } }, { venue: null }]
+          : [{ venue: 'PMU' }];
       }
       const races = await Race.find(filter).sort({ date: -1, race_number: 1 }).lean();
       const hippodromes = [...new Set(races.map((r) => r.hippodrome).filter(Boolean))] as string[];
@@ -76,10 +84,13 @@ router.get(
   }
 );
 
-/** GET /api/v1/public/results?date=YYYY-MM-DD */
+/** GET /api/v1/public/results?date=YYYY-MM-DD&venue=SOREC|PMU */
 router.get(
   '/results',
-  [query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD')],
+  [
+    query('date').optional().isISO8601().withMessage('date must be YYYY-MM-DD'),
+    query('venue').optional().isIn(['SOREC', 'PMU']).withMessage('venue must be SOREC or PMU'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -88,25 +99,23 @@ router.get(
         return;
       }
       const date = req.query.date as string | undefined;
+      const venue = req.query.venue as string | undefined;
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome' } },
+        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome', time: '$race.time' } },
       ];
+      const matchStage: Record<string, unknown> = {};
       if (date) {
         const dateStart = new Date(date + 'T00:00:00.000Z');
         const dateEnd = new Date(date + 'T23:59:59.999Z');
-        pipeline.push({ $match: { 'race.date': { $gte: dateStart, $lte: dateEnd } } });
+        matchStage['race.date'] = { $gte: dateStart, $lte: dateEnd };
       }
+      if (venue) matchStage['race.venue'] = venue;
+      if (Object.keys(matchStage).length) pipeline.push({ $match: matchStage });
       pipeline.push({ $project: { race: 0 } });
       const results = await Result.aggregate(pipeline as never[]);
-      const hippodromes = [...new Set((results as { hippodrome?: string }[]).map((r) => r.hippodrome).filter(Boolean))] as string[];
-      const weatherMap = hippodromes.length ? await getWeatherForLocations(hippodromes) : {};
-      const withWeather = (results as { hippodrome?: string }[]).map((r) => ({
-        ...r,
-        weather: r.hippodrome && weatherMap[r.hippodrome] ? weatherMap[r.hippodrome]!.temp : null,
-      }));
-      apiResponse(res, true, withWeather, 'Results retrieved');
+      apiResponse(res, true, results, 'Results retrieved');
     } catch (err) {
       console.error('GET public results error:', err);
       apiResponse(res, false, null, 'Server error', 500);
