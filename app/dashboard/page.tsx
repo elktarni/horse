@@ -8,6 +8,13 @@ const PING_URL = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_UR
   ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api/v1/ping`
   : '';
 
+function JsonView({ data }: { data: unknown }) {
+  const raw = typeof data === 'object' && data !== null
+    ? JSON.stringify(data, null, 2)
+    : String(data);
+  return <pre className="text-gray-300 whitespace-pre-wrap break-words font-mono text-sm">{raw}</pre>;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     racesToday: 0,
@@ -17,6 +24,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
   const [lastPingAt, setLastPingAt] = useState<string | null>(null);
+  const [apiUrl, setApiUrl] = useState('');
+  const [apiResult, setApiResult] = useState<unknown>(null);
+  const [apiFetching, setApiFetching] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -31,6 +42,29 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const fetchCustomApi = async () => {
+    const url = apiUrl.trim();
+    if (!url) return;
+    setApiFetching(true);
+    setApiError(null);
+    setApiResult(null);
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      const text = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      try {
+        const json = JSON.parse(text);
+        setApiResult(json);
+      } catch {
+        setApiResult(text);
+      }
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : 'Fetch failed');
+    } finally {
+      setApiFetching(false);
+    }
+  };
 
   useEffect(() => {
     api.get<{ pong: boolean }>('/api/v1/ping')
@@ -105,6 +139,48 @@ export default function DashboardPage() {
           </div>
         ) : (
           <p className="text-xs text-gray-500">Set <code className="bg-dark-700 px-1 rounded">NEXT_PUBLIC_API_URL</code> to your Render API URL to see the ping link here.</p>
+        )}
+      </div>
+
+      <div className="bg-dark-800 rounded-xl border border-dark-600 p-6 mt-6">
+        <h2 className="text-lg font-semibold text-white mb-2">API URL preview</h2>
+        <p className="text-gray-400 text-sm mb-3">
+          Enter any API URL to fetch and view its response in a structured format. Supports JSON APIs (CORS must allow your domain).
+        </p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="url"
+            value={apiUrl}
+            onChange={(e) => setApiUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && fetchCustomApi()}
+            placeholder="https://api.example.com/data"
+            className="flex-1 px-4 py-2 rounded-lg bg-dark-700 border border-dark-500 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+          />
+          <button
+            type="button"
+            onClick={fetchCustomApi}
+            disabled={apiFetching || !apiUrl.trim()}
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium"
+          >
+            {apiFetching ? 'Fetching…' : 'Fetch'}
+          </button>
+        </div>
+        {apiError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            {apiError}
+          </div>
+        )}
+        {apiResult !== null && (
+          <div className="rounded-lg bg-dark-900 border border-dark-600 p-4 overflow-x-auto">
+            <p className="text-xs text-gray-500 mb-2">Response:</p>
+            <div className="font-mono text-sm">
+              {typeof apiResult === 'string' ? (
+                <pre className="text-gray-300 whitespace-pre-wrap break-words">{apiResult}</pre>
+              ) : (
+                <JsonView data={apiResult} />
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
