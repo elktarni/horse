@@ -204,9 +204,9 @@ export async function runCasaProgrammeSync(options: {
   const data = (await response.json()) as CasaProgrammeResponse;
   const allMeetings = data.meetings || [];
   const meetingsFromApi = allMeetings.length;
-  // SOREC = Morocco only; PMU = all meetings (e.g. France)
+  // SOREC = Morocco only; PMU = France only (country FR)
   const meetings = venue.toUpperCase() === 'PMU'
-    ? allMeetings
+    ? allMeetings.filter((m) => (m.country ?? '').toUpperCase() === 'FR')
     : allMeetings.filter((m) => isMoroccoMeeting(m));
   const meetingsMorocco = venue.toUpperCase() === 'PMU' ? meetings.length : meetings.filter((m) => isMoroccoMeeting(m)).length;
   const dateStart = new Date(date + 'T00:00:00.000Z');
