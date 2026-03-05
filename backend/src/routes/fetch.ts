@@ -24,7 +24,8 @@ router.get(
       });
       const text = await response.text();
       if (!response.ok) {
-        apiResponse(res, false, null, `HTTP ${response.status}: ${text.slice(0, 300)}`, response.status);
+        // Always return 200 so the client doesn't treat 401 as auth failure and log the user out
+        apiResponse(res, false, { status: response.status, body: text.slice(0, 500) }, `HTTP ${response.status}: ${text.slice(0, 200)}`);
         return;
       }
       try {
