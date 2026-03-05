@@ -13,6 +13,7 @@ interface ResultRow {
   arrival?: number[];
   hippodrome?: string;
   time?: string;
+  reunion?: string;
   _id?: string;
 }
 
@@ -297,6 +298,7 @@ export default function ResultsPage() {
                     />
                   </th>
                   <th className="p-4">Race ID</th>
+                  <th className="p-4">Reunion</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Arrival</th>
                   <th className="p-4">Time</th>
@@ -315,6 +317,7 @@ export default function ResultsPage() {
                       />
                     </td>
                     <td className="p-4 font-mono text-sm">{r.race_id}</td>
+                    <td className="p-4 text-sm">{r.reunion ?? '—'}</td>
                     <td className="p-4 max-w-[200px] truncate" title={r.title}>{r.title || '—'}</td>
                     <td className="p-4">
                       {Array.isArray(r.arrival) && r.arrival.length > 0

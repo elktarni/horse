@@ -103,7 +103,7 @@ router.get(
       const pipeline: Record<string, unknown>[] = [
         { $lookup: { from: 'races', localField: 'race_id', foreignField: '_id', as: 'race' } },
         { $unwind: { path: '$race', preserveNullAndEmptyArrays: true } },
-        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome', time: '$race.time' } },
+        { $addFields: { title: '$race.title', hippodrome: '$race.hippodrome', time: '$race.time', reunion: '$race.reunion' } },
       ];
       const matchStage: Record<string, unknown> = {};
       if (date) {
