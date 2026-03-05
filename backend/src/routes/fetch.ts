@@ -18,8 +18,12 @@ router.get(
         return;
       }
       const url = (req.query.url as string).trim();
+      const headers: HeadersInit = { Accept: 'application/json' };
+      // Forward user's auth token so they can fetch their own API (e.g. public routes now accept Bearer)
+      const auth = req.headers.authorization;
+      if (auth && typeof auth === 'string') headers['Authorization'] = auth;
       const response = await fetch(url, {
-        headers: { Accept: 'application/json' },
+        headers,
         signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
