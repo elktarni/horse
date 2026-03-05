@@ -12,6 +12,7 @@ import uploadRoutes from './routes/upload';
 import weatherRoutes from './routes/weather';
 import syncRoutes, { runCasaProgrammeSync } from './routes/sync';
 import publicRoutes from './routes/public';
+import fetchRoutes from './routes/fetch';
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use('/api/v1/races', racesRoutes);
 app.use('/api/v1/results', resultsRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/weather', weatherRoutes);
+app.use('/api/v1/fetch', fetchRoutes);
 app.use('/api/v1/sync', syncRoutes);
 
 app.get('/api/health', (_req, res) => {

@@ -50,14 +50,13 @@ export default function DashboardPage() {
     setApiError(null);
     setApiResult(null);
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
-      try {
-        const json = JSON.parse(text);
-        setApiResult(json);
-      } catch {
-        setApiResult(text);
+      const res = await api.get<unknown>(`/api/v1/fetch?url=${encodeURIComponent(url)}`);
+      if (!res.success) throw new Error(res.message);
+      const data = res.data;
+      if (data && typeof data === 'object' && 'raw' in data && typeof (data as { raw: string }).raw === 'string') {
+        setApiResult((data as { raw: string }).raw);
+      } else {
+        setApiResult(data);
       }
     } catch (e) {
       setApiError(e instanceof Error ? e.message : 'Fetch failed');
@@ -145,7 +144,7 @@ export default function DashboardPage() {
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-6 mt-6">
         <h2 className="text-lg font-semibold text-white mb-2">API URL preview</h2>
         <p className="text-gray-400 text-sm mb-3">
-          Enter any API URL to fetch and view its response in a structured format. Supports JSON APIs (CORS must allow your domain).
+          Enter any API URL to fetch and view its response. Works with your own API and any public URL (no CORS needed).
         </p>
         <div className="flex gap-2 mb-4">
           <input
