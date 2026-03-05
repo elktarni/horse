@@ -18,7 +18,7 @@ router.get(
         return;
       }
       const url = (req.query.url as string).trim();
-      const headers: HeadersInit = { Accept: 'application/json' };
+      const headers: Record<string, string> = { Accept: 'application/json' };
       // Forward user's auth token so they can fetch their own API (e.g. public routes now accept Bearer)
       const auth = req.headers.authorization;
       if (auth && typeof auth === 'string') headers['Authorization'] = auth;
