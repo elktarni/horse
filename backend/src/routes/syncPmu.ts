@@ -173,7 +173,7 @@ export async function runPmuProgrammeSync(options: {
       const time = course.heureDepart != null ? formatTime(course.heureDepart) : '00:00';
       const distance = Number(course.distance) || 0;
       const title = (course.libelle ?? '').trim() || `Race ${raceNumber}`;
-      const purse = course.montantPrix != null ? Math.round(course.montantPrix / 100) : 0;
+      const purse = course.montantPrix != null ? course.montantPrix : 0;
 
       if (addRaces) {
         const existing = await Race.findOne({
