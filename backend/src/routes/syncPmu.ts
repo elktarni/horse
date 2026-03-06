@@ -116,7 +116,7 @@ async function fetchPmuParticipants(
     return list
       .filter((p) => p && (p.numPmu ?? 0) >= 1)
       .map((p) => {
-        const weight = p.handicapPoids != null ? Math.round(p.handicapPoids / 10) / 10 : 58;
+        const weight = p.handicapPoids != null ? Math.round(p.handicapPoids) / 10 : 58;
         const sexeAge = pmuSexeAge(p.sexe, p.age);
         return {
           number: Number(p.numPmu) || 0,
