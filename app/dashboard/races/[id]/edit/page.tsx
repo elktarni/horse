@@ -11,6 +11,7 @@ interface Participant {
   horse: string;
   jockey: string;
   weight: number;
+  sexeAge?: string;
 }
 
 export default function EditRacePage() {
@@ -65,7 +66,7 @@ export default function EditRacePage() {
   const addParticipant = () => {
     setParticipants((p) => [
       ...p,
-      { number: p.length + 1, horse: '', jockey: '', weight: 58 },
+      { number: p.length + 1, horse: '', jockey: '', weight: 58, sexeAge: '' },
     ]);
   };
 
@@ -302,6 +303,15 @@ export default function EditRacePage() {
                     type="number"
                     value={p.weight || ''}
                     onChange={(e) => updateParticipant(i, 'weight', +e.target.value || 0)}
+                    className="w-full px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                  />
+                </div>
+                <div className="w-16">
+                  <label className="block text-xs text-gray-400 mb-0.5">Sexe/Âge</label>
+                  <input
+                    value={p.sexeAge ?? ''}
+                    onChange={(e) => updateParticipant(i, 'sexeAge', e.target.value)}
+                    placeholder="H/4"
                     className="w-full px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
                   />
                 </div>

@@ -5,6 +5,8 @@ export interface IParticipant {
   horse: string;
   jockey: string;
   weight: number;
+  /** Sexe/Âge e.g. "H/4" (PMU format) */
+  sexeAge?: string;
 }
 
 export interface IRace extends Omit<Document, '_id'> {
@@ -31,6 +33,7 @@ const ParticipantSchema = new Schema<IParticipant>(
     horse: { type: String, required: true },
     jockey: { type: String, required: true },
     weight: { type: Number, required: true },
+    sexeAge: { type: String },
   },
   { _id: false }
 );

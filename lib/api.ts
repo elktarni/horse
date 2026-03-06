@@ -78,7 +78,7 @@ export interface Race {
   reunion?: string;
   /** Course type: SOREC (Morocco) or PMU (France) */
   venue?: 'SOREC' | 'PMU';
-  participants: { number: number; horse: string; jockey: string; weight: number }[];
+  participants: { number: number; horse: string; jockey: string; weight: number; sexeAge?: string }[];
   status?: RaceStatus;
 }
 

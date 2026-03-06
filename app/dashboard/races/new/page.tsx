@@ -13,6 +13,7 @@ interface Participant {
   horse: string;
   jockey: string;
   weight: number;
+  sexeAge?: string;
 }
 
 export default function NewRacePage() {
@@ -37,13 +38,13 @@ export default function NewRacePage() {
     weather_temp: undefined as number | undefined,
   });
   const [participants, setParticipants] = useState<Participant[]>([
-    { number: 1, horse: '', jockey: '', weight: 58 },
+    { number: 1, horse: '', jockey: '', weight: 58, sexeAge: '' },
   ]);
 
   const addParticipant = () => {
     setParticipants((p) => [
       ...p,
-      { number: p.length + 1, horse: '', jockey: '', weight: 58 },
+      { number: p.length + 1, horse: '', jockey: '', weight: 58, sexeAge: '' },
     ]);
   };
 
@@ -265,6 +266,13 @@ export default function NewRacePage() {
                   value={p.weight || ''}
                   onChange={(e) => updateParticipant(i, 'weight', +e.target.value || 0)}
                   className="w-20 px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                />
+                <input
+                  placeholder="Sexe/Âge"
+                  value={p.sexeAge ?? ''}
+                  onChange={(e) => updateParticipant(i, 'sexeAge', e.target.value)}
+                  className="w-16 px-3 py-1.5 rounded bg-dark-600 border border-dark-500 text-white text-sm"
+                  title="e.g. H/4, F/6"
                 />
                 <button
                   type="button"

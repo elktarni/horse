@@ -41,6 +41,8 @@ interface PmuParticipant {
   nom?: string;
   driver?: string;
   handicapPoids?: number;
+  sexe?: string;
+  age?: number;
 }
 
 interface PmuCourse {
@@ -79,12 +81,32 @@ export interface PmuSyncResult {
   message: string;
 }
 
-/** Fetch participants from PMU API */
+/** Map PMU sexe to short code: MALES→M, FEMELLES→F, HONGRES→H */
+function pmuSexeCode(sexe: string | undefined): string {
+  if (!sexe) return '';
+  const u = sexe.toUpperCase();
+  if (u === 'MALES') return 'M';
+  if (u === 'FEMELLES') return 'F';
+  if (u === 'HONGRES') return 'H';
+  return u.charAt(0);
+}
+
+/** Build Sexe/Âge string e.g. "H/4" */
+function pmuSexeAge(sexe: string | undefined, age: number | undefined): string {
+  const code = pmuSexeCode(sexe);
+  const a = age != null && age >= 1 ? String(age) : '';
+  if (!code && !a) return '';
+  if (!code) return a;
+  if (!a) return code;
+  return `${code}/${a}`;
+}
+
+/** Fetch participants from PMU API. handicapPoids is in decagrams (÷10 = kg). */
 async function fetchPmuParticipants(
   datePmu: string,
   reunionNum: number,
   courseNum: number
-): Promise<{ number: number; horse: string; jockey: string; weight: number }[]> {
+): Promise<{ number: number; horse: string; jockey: string; weight: number; sexeAge?: string }[]> {
   try {
     const url = `${PMU_BASE}/${datePmu}/R${reunionNum}/C${courseNum}/participants`;
     const res = await fetch(url);
@@ -93,12 +115,17 @@ async function fetchPmuParticipants(
     const list = data.participants ?? [];
     return list
       .filter((p) => p && (p.numPmu ?? 0) >= 1)
-      .map((p) => ({
-        number: Number(p.numPmu) || 0,
-        horse: String(p.nom ?? '').trim() || '—',
-        jockey: String(p.driver ?? '').trim() || '—',
-        weight: p.handicapPoids != null ? Math.round(p.handicapPoids / 100) / 10 : 58,
-      }))
+      .map((p) => {
+        const weight = p.handicapPoids != null ? Math.round(p.handicapPoids / 10) / 10 : 58;
+        const sexeAge = pmuSexeAge(p.sexe, p.age);
+        return {
+          number: Number(p.numPmu) || 0,
+          horse: String(p.nom ?? '').trim() || '—',
+          jockey: String(p.driver ?? '').trim() || '—',
+          weight,
+          ...(sexeAge ? { sexeAge } : {}),
+        };
+      })
       .filter((x) => x.number >= 1);
   } catch {
     return [];
