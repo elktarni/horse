@@ -291,40 +291,45 @@ export default function ResultsPage() {
         </label>
       </div>
 
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses ({venue === 'SOREC' ? 'Morocco: Marrakech, etc.' : 'PMU France'})</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Fetch programme and create/update results for finished races that match your existing races. The list will refresh for the synced date.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-400">
-            Date
-            <input
-              type="date"
-              value={syncDate}
-              onChange={(e) => setSyncDate(e.target.value)}
-              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={handleSyncFromCasa}
-            disabled={syncLoading}
-            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
-          >
-            {syncLoading ? 'Syncing…' : 'Sync results'}
-          </button>
+      {venue === 'SOREC' && (
+        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
+          <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (Morocco: Marrakech, etc.)</h2>
+          <p className="text-sm text-gray-500 mb-3">
+            Fetch programme and create/update results for finished races that match your existing races. The list will refresh for the synced date.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-400">
+              Date
+              <input
+                type="date"
+                value={syncDate}
+                onChange={(e) => setSyncDate(e.target.value)}
+                className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSyncFromCasa}
+              disabled={syncLoading}
+              className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
+            >
+              {syncLoading ? 'Syncing…' : 'Sync results'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Server auto-syncs results every 10 min (even when you leave or log out).
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Server auto-syncs results every 10 min (even when you leave or log out).
-        </p>
-      </div>
+      )}
 
       {venue === 'PMU' && (
         <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
           <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from PMU API</h2>
           <p className="text-sm text-gray-500 mb-3">
             Create/update results for France races from the native PMU Turfinfo API. Races must exist first (add them from the Races tab with Sync PMU).
+          </p>
+          <p className="text-xs text-gray-500 mb-3">
+            Server auto-syncs results every 10 min (even when you leave or log out).
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-gray-400">

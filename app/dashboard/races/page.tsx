@@ -374,31 +374,33 @@ export default function RacesPage() {
         </label>
       </div>
 
-      <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses ({venue === 'SOREC' ? 'SOREC Maroc' : 'PMU France'})</h2>
-        <p className="text-sm text-gray-500 mb-3">
-          Import races and results for <strong>Morocco only</strong> (e.g. Marrakech, Casablanca) from the Casa Courses API. Adds missing races and fills results for finished races. The list will refresh for the synced date.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-400">
-            Date
-            <input
-              type="date"
-              value={syncDate}
-              onChange={(e) => setSyncDate(e.target.value)}
-              className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={handleSyncFromCasa}
-            disabled={syncLoading}
-            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
-          >
-            {syncLoading ? 'Syncing…' : 'Sync'}
-          </button>
+      {venue === 'SOREC' && (
+        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
+          <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (SOREC Maroc)</h2>
+          <p className="text-sm text-gray-500 mb-3">
+            Import races and results for <strong>Morocco</strong> (e.g. Marrakech, Casablanca) from the Casa Courses API. Adds missing races and fills results for finished races. The list will refresh for the synced date.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-400">
+              Date
+              <input
+                type="date"
+                value={syncDate}
+                onChange={(e) => setSyncDate(e.target.value)}
+                className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSyncFromCasa}
+              disabled={syncLoading}
+              className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
+            >
+              {syncLoading ? 'Syncing…' : 'Sync'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {venue === 'PMU' && (
         <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
