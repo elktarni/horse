@@ -148,6 +148,8 @@ router.post(
             horse: String(p.horse),
             jockey: String(p.jockey),
             weight: typeof p.weight === 'number' ? p.weight : 58,
+            ...(p.sexe != null && String(p.sexe).trim() ? { sexe: String(p.sexe).trim() } : {}),
+            ...(p.age != null && Number(p.age) >= 1 ? { age: Number(p.age) } : {}),
             ...(p.sexeAge != null && String(p.sexeAge).trim() ? { sexeAge: String(p.sexeAge).trim() } : {}),
           }));
 

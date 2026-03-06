@@ -106,7 +106,7 @@ async function fetchPmuParticipants(
   datePmu: string,
   reunionNum: number,
   courseNum: number
-): Promise<{ number: number; horse: string; jockey: string; weight: number; sexeAge?: string }[]> {
+): Promise<{ number: number; horse: string; jockey: string; weight: number; sexe?: string; age?: number; sexeAge?: string }[]> {
   try {
     const url = `${PMU_BASE}/${datePmu}/R${reunionNum}/C${courseNum}/participants`;
     const res = await fetch(url);
@@ -117,12 +117,16 @@ async function fetchPmuParticipants(
       .filter((p) => p && (p.numPmu ?? 0) >= 1)
       .map((p) => {
         const weight = p.handicapPoids != null ? Math.round(p.handicapPoids) / 10 : 58;
+        const sexe = pmuSexeCode(p.sexe);
+        const age = p.age != null && p.age >= 1 ? p.age : undefined;
         const sexeAge = pmuSexeAge(p.sexe, p.age);
         return {
           number: Number(p.numPmu) || 0,
           horse: String(p.nom ?? '').trim() || '—',
           jockey: String(p.driver ?? '').trim() || '—',
           weight,
+          ...(sexe ? { sexe } : {}),
+          ...(age != null ? { age } : {}),
           ...(sexeAge ? { sexeAge } : {}),
         };
       })

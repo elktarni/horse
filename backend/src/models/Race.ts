@@ -5,7 +5,11 @@ export interface IParticipant {
   horse: string;
   jockey: string;
   weight: number;
-  /** Sexe/Âge e.g. "H/4" (PMU format) */
+  /** Sex: M (mâle), F (femelle), H (hongre) */
+  sexe?: string;
+  /** Age in years */
+  age?: number;
+  /** Sexe/Âge combined e.g. "H/4" (PMU format) */
   sexeAge?: string;
 }
 
@@ -33,6 +37,8 @@ const ParticipantSchema = new Schema<IParticipant>(
     horse: { type: String, required: true },
     jockey: { type: String, required: true },
     weight: { type: Number, required: true },
+    sexe: { type: String },
+    age: { type: Number },
     sexeAge: { type: String },
   },
   { _id: false }

@@ -123,9 +123,7 @@ export default function RacesPage() {
       case 'title':
         return race.title ?? '';
       case 'purse':
-        return race.purse != null && race.purse > 0
-          ? String(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse)
-          : '';
+        return race.purse != null && race.purse > 0 ? String(race.purse) : '';
       case 'reunion':
         return race.reunion ?? '';
       default:
@@ -593,7 +591,7 @@ export default function RacesPage() {
                         />
                       ) : (
                         race.purse != null && race.purse > 0
-                          ? `${Number(race.purse > 100000 ? Math.round(race.purse / 100) : race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
+                          ? `${Number(race.purse).toLocaleString()} ${race.pursecurrency || 'Dh'}`
                           : '—'
                       )}
                     </td>

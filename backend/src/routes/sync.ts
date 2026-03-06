@@ -257,7 +257,7 @@ export async function runCasaProgrammeSync(options: {
         const details = await fetchCasaRaceDetails(race.id, date);
         if (details && (details.purse != null || details.participants?.length)) {
           const update: Record<string, unknown> = {};
-          if (details.purse != null) update.purse = Math.round(details.purse / 100);
+          if (details.purse != null) update.purse = Math.round(details.purse);
           if (details.pursecurrency) update.pursecurrency = details.pursecurrency;
           if (details.participants?.length) update.participants = details.participants;
           if (Object.keys(update).length) await Race.findByIdAndUpdate(_id, { $set: update });

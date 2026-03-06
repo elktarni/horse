@@ -49,7 +49,7 @@ export default function EditRacePage() {
             time: d.time,
             distance: d.distance,
             title: d.title,
-            purse: d.purse != null && d.purse > 100000 ? Math.round(d.purse / 100) : (d.purse ?? 0),
+            purse: d.purse ?? 0,
             pursecurrency: d.pursecurrency ?? 'Dh',
             weather_temp: d.weather_temp,
             reunion: d.reunion ?? '',
