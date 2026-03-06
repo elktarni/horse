@@ -4,6 +4,7 @@ import Race from '../models/Race';
 import Result from '../models/Result';
 import { apiResponse } from '../middleware/response';
 import { authMiddleware } from '../middleware/auth';
+import syncPmuRoutes from './syncPmu';
 
 const router = Router();
 router.use(authMiddleware);
@@ -383,5 +384,7 @@ router.get(
     }
   }
 );
+
+router.use(syncPmuRoutes);
 
 export default router;

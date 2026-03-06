@@ -26,6 +26,15 @@ interface CasaSyncResponse {
   message: string;
 }
 
+interface PmuSyncResponse {
+  created: string[];
+  updated: string[];
+  notFound: string[];
+  reunionsFromApi?: number;
+  reunionsFrance?: number;
+  message: string;
+}
+
 export default function ResultsPage() {
   const [venue, setVenue] = useState<'SOREC' | 'PMU'>(() => {
     if (typeof window !== 'undefined') {
@@ -37,6 +46,7 @@ export default function ResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [syncPmuLoading, setSyncPmuLoading] = useState(false);
   const [syncDate, setSyncDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -156,6 +166,37 @@ export default function ResultsPage() {
     }
   };
 
+  const handleSyncFromPmu = async () => {
+    setSyncPmuLoading(true);
+    try {
+      const params = new URLSearchParams({ date: syncDate });
+      const r = await api.get<PmuSyncResponse>(`/api/v1/sync/pmu-programme?${params}`);
+      if (!r.success || !r.data) throw new Error(r.message);
+      const d = r.data;
+      const total = d.created.length + d.updated.length;
+      if (total > 0) {
+        toast.success(d.message ?? 'Sync done.');
+        setViewDate('custom');
+        setCustomDate(syncDate);
+        setLoading(true);
+        api.get<ResultRow[]>(`/api/v1/results?date=${syncDate}&venue=PMU`).then((r) => {
+          if (r.success && Array.isArray(r.data)) setResults(r.data);
+        }).catch(() => toast.error('Failed to refresh list')).finally(() => setLoading(false));
+      } else if (d.notFound?.length) {
+        toast(`${d.notFound.length} race(s) not in DB. Add races from the Races tab first (use Sync PMU there).`, { icon: 'ℹ️', duration: 5000 });
+      } else {
+        const fromApi = d.reunionsFromApi ?? 0;
+        const france = d.reunionsFrance ?? 0;
+        const hint = fromApi === 0 ? 'PMU API returned no reunions for this date.' : france === 0 ? 'No France reunions.' : 'No finished races with results.';
+        toast(`${d.message || 'Nothing added.'} ${hint}`, { icon: 'ℹ️', duration: 6000 });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'PMU sync failed');
+    } finally {
+      setSyncPmuLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -251,9 +292,9 @@ export default function ResultsPage() {
       </div>
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
-        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses (Morocco: Marrakech, etc.)</h2>
+        <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from Casa Courses ({venue === 'SOREC' ? 'Morocco: Marrakech, etc.' : 'PMU France'})</h2>
         <p className="text-sm text-gray-500 mb-3">
-          Fetch programme and create/update results for finished races that match your existing races. Only Morocco meetings (e.g. Marrakech) are synced. The list will refresh for the synced date.
+          Fetch programme and create/update results for finished races that match your existing races. The list will refresh for the synced date.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-400">
@@ -278,6 +319,34 @@ export default function ResultsPage() {
           Server auto-syncs results every 10 min (even when you leave or log out).
         </p>
       </div>
+
+      {venue === 'PMU' && (
+        <div className="bg-dark-800 rounded-xl border border-dark-600 p-4 mb-6">
+          <h2 className="text-sm font-medium text-gray-400 mb-2">Sync from PMU API</h2>
+          <p className="text-sm text-gray-500 mb-3">
+            Create/update results for France races from the native PMU Turfinfo API. Races must exist first (add them from the Races tab with Sync PMU).
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-400">
+              Date
+              <input
+                type="date"
+                value={syncDate}
+                onChange={(e) => setSyncDate(e.target.value)}
+                className="rounded-lg bg-dark-700 border border-dark-600 px-3 py-2 text-white text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSyncFromPmu}
+              disabled={syncPmuLoading}
+              className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-dark-900 font-medium text-sm transition"
+            >
+              {syncPmuLoading ? 'Syncing…' : 'Sync PMU'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden">
         {results.length === 0 ? (
