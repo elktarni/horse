@@ -11,6 +11,7 @@ import resultsRoutes from './routes/results';
 import uploadRoutes from './routes/upload';
 import weatherRoutes from './routes/weather';
 import syncRoutes, { runCasaProgrammeSync } from './routes/sync';
+import { runPmuProgrammeSync } from './routes/syncPmu';
 import publicRoutes from './routes/public';
 import fetchRoutes from './routes/fetch';
 
@@ -83,18 +84,24 @@ app.get('/api/health', (_req, res) => {
 
 function startAutoSync(): void {
   if (!AUTO_SYNC_ENABLED) return;
+  const today = () => new Date().toISOString().slice(0, 10);
   const run = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    runCasaProgrammeSync({ date: today, venue: 'SOREC', addRaces: false })
+    runCasaProgrammeSync({ date: today(), venue: 'SOREC', addRaces: false })
       .then((r) => {
         const n = r.created.length + r.updated.length;
-        if (n > 0) console.log(`[Auto-sync] ${r.message}`);
+        if (n > 0) console.log(`[Auto-sync SOREC] ${r.message}`);
       })
-      .catch((err) => console.error('[Auto-sync]', err));
+      .catch((err) => console.error('[Auto-sync SOREC]', err));
+    runPmuProgrammeSync({ date: today(), addRaces: false })
+      .then((r) => {
+        const n = r.created.length + r.updated.length;
+        if (n > 0) console.log(`[Auto-sync PMU] ${r.message}`);
+      })
+      .catch((err) => console.error('[Auto-sync PMU]', err));
   };
   run(); // run once on startup
   setInterval(run, AUTO_SYNC_INTERVAL_MS);
-  console.log(`Auto-sync enabled: every ${AUTO_SYNC_INTERVAL_MS / 60_000} min`);
+  console.log(`Auto-sync enabled: every ${AUTO_SYNC_INTERVAL_MS / 60_000} min (SOREC + PMU)`);
 }
 
 connectDB()
