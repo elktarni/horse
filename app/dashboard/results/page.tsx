@@ -251,17 +251,17 @@ export default function ResultsPage() {
         <span className="text-sm text-gray-500">View:</span>
         <button
           type="button"
-          onClick={() => setViewDate('today')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'today' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
-        >
-          Today
-        </button>
-        <button
-          type="button"
           onClick={() => setViewDate('yesterday')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'yesterday' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
         >
           Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewDate('today')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewDate === 'today' ? 'bg-accent text-dark-900' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}
+        >
+          Today
         </button>
         <button
           type="button"
@@ -270,6 +270,7 @@ export default function ResultsPage() {
         >
           Tomorrow
         </button>
+        <span className="w-px h-6 bg-dark-600 mx-1" aria-hidden />
         <button
           type="button"
           onClick={() => setViewDate(null)}
@@ -373,9 +374,9 @@ export default function ResultsPage() {
                   </th>
                   <th className="p-4">Race ID</th>
                   <th className="p-4">Reunion</th>
+                  <th className="p-4">Time</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Arrival</th>
-                  <th className="p-4">Time</th>
                   <th className="p-4">Actions</th>
                 </tr>
               </thead>
@@ -392,13 +393,13 @@ export default function ResultsPage() {
                     </td>
                     <td className="p-4 font-mono text-sm">{r.race_id}</td>
                     <td className="p-4 text-sm">{r.reunion ?? '—'}</td>
+                    <td className="p-4 text-sm">{r.time ?? '—'}</td>
                     <td className="p-4 max-w-[200px] truncate" title={r.title}>{r.title || '—'}</td>
                     <td className="p-4">
                       {Array.isArray(r.arrival) && r.arrival.length > 0
                         ? r.arrival.map((n) => Number(n)).join(' → ')
                         : '—'}
                     </td>
-                    <td className="p-4 text-sm">{r.time ?? '—'}</td>
                     <td className="p-4 flex gap-2">
                       <Link
                         href={`/dashboard/results/${encodeURIComponent(r.race_id)}/edit`}
