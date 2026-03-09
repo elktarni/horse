@@ -353,6 +353,7 @@ export default function RacesPage() {
         >
           Tomorrow
         </button>
+        <span className="w-px h-6 bg-dark-600 mx-1" aria-hidden />
         <button
           type="button"
           onClick={() => setViewDate(null)}
@@ -453,8 +454,8 @@ export default function RacesPage() {
                   <th className="p-4">Hippodrome</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Reunion</th>
-                  <th className="p-4">Race #</th>
                   <th className="p-4">Time</th>
+                  <th className="p-4">Race #</th>
                   <th className="p-4">Distance</th>
                   <th className="p-4">Title</th>
                   <th className="p-4">Purse</th>
@@ -512,7 +513,6 @@ export default function RacesPage() {
                         race.reunion ?? '—'
                       )}
                     </td>
-                    <td className="p-4">{race.race_number}</td>
                     <td
                       className="p-4 cursor-text"
                       onDoubleClick={() => startEditing(race, 'time')}
@@ -533,6 +533,7 @@ export default function RacesPage() {
                         race.time
                       )}
                     </td>
+                    <td className="p-4">{race.race_number}</td>
                     <td
                       className="p-4 cursor-text"
                       onDoubleClick={() => startEditing(race, 'distance')}
