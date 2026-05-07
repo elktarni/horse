@@ -86,13 +86,13 @@ function startAutoSync(): void {
   if (!AUTO_SYNC_ENABLED) return;
   const today = () => new Date().toISOString().slice(0, 10);
   const run = () => {
-    runCasaProgrammeSync({ date: today(), venue: 'SOREC', addRaces: false })
+    runCasaProgrammeSync({ date: today(), venue: 'SOREC', addRaces: true })
       .then((r) => {
         const n = r.created.length + r.updated.length;
         if (n > 0) console.log(`[Auto-sync SOREC] ${r.message}`);
       })
       .catch((err) => console.error('[Auto-sync SOREC]', err));
-    runPmuProgrammeSync({ date: today(), addRaces: false })
+    runPmuProgrammeSync({ date: today(), addRaces: true })
       .then((r) => {
         const n = r.created.length + r.updated.length;
         if (n > 0) console.log(`[Auto-sync PMU] ${r.message}`);
